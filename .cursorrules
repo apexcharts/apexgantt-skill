@@ -1,0 +1,180 @@
+# ApexGantt — AI Coding Rules
+
+You are working with ApexGantt, a JavaScript Gantt / timeline library built on SVG.
+Documentation: https://apexcharts.com/docs/apexgantt/
+NPM: apexgantt
+GitHub: https://github.com/apexcharts/apexgantt
+
+## Critical Rules
+
+1. **Always call `gantt.render()`** after `new ApexGantt(el, options)`. The constructor builds state but does not paint the DOM.
+2. **Always call `gantt.destroy()`** before unmounting in React / Vue / Angular — it frees `ResizeObserver`s and global listeners.
+3. **`series` is the task array** — required. Each task has `id` (unique, stable), `name`, `startTime`, and usually `endTime`.
+4. **Date strings must match `inputDateFormat`** (default `'MM-DD-YYYY'`). For ISO dates set `inputDateFormat: 'YYYY-MM-DD'`.
+5. **`progress` is 0–100**, not 0–1.
+6. **Milestones omit `endTime`** and use `type: 'milestone'`.
+7. **`parentId` must reference an existing task `id`**. Orphans are silently flattened.
+8. **Use `updateTask(id, patch)` for single-task changes**, `update(options)` for full reconfigures.
+9. **Events fire on the host container element**, not on the gantt instance. Use `container.addEventListener(GanttEvents.…, …)`.
+10. **`enableSelection: true` is required** for selection APIs and the `selectionChange` event.
+11. **Set the license key once** at app startup with `ApexGantt.setLicense('KEY')` to remove the watermark.
+12. **Use `parsing` config** instead of manual `.map()` to adapt non-standard data shapes.
+
+---
+
+## Task Data Format
+
+```ts
+{
+  id: string;                       // REQUIRED, unique, stable
+  name: string;                     // REQUIRED, display label
+  startTime: string;                // REQUIRED, parsed by inputDateFormat
+  endTime?: string;                 // omit for milestones
+  progress?: number;                // 0–100
+  type?: 'task' | 'milestone';      // default 'task'
+  parentId?: string;                // hierarchical nesting
+  dependency?: string | { taskId: string; type?: 'FS'|'SS'|'FF'|'SF'; lag?: number };
+  baseline?: { start: string; end: string };
+  barBackgroundColor?: string;
+  rowBackgroundColor?: string;
+  collapsed?: boolean;
+}
+```
+
+```js
+const gantt = new ApexGantt(document.getElementById('chart'), {
+  inputDateFormat: 'YYYY-MM-DD',
+  series: [
+    { id: 't1', name: 'Design',  startTime: '2026-01-01', endTime: '2026-01-15', progress: 60 },
+    { id: 't2', name: 'Develop', startTime: '2026-01-16', endTime: '2026-02-15', progress: 25, dependency: 't1' },
+    { id: 'm1', name: 'Launch',  startTime: '2026-02-20', type: 'milestone' }
+  ]
+});
+gantt.render();
+```
+
+---
+
+## Lifecycle
+
+```js
+import { ApexGantt, ViewMode, GanttEvents } from 'apexgantt';
+
+ApexGantt.setLicense('KEY');                      // optional, once at app startup
+
+const gantt = new ApexGantt(el, {
+  series: tasks,
+  viewMode: ViewMode.Week,
+  inputDateFormat: 'YYYY-MM-DD',
+});
+gantt.render();                                   // REQUIRED
+gantt.update({ viewMode: ViewMode.Day });         // merge + re-render
+gantt.updateTask('t1', { progress: 75 });         // fast single-task patch
+gantt.zoomIn(); gantt.zoomOut();                  // Day↔Week↔Month↔Quarter↔Year
+gantt.destroy();                                  // free observers + DOM
+```
+
+---
+
+## API Methods
+
+| Method | Description |
+|---|---|
+| `render()` | Paint chart. Required. |
+| `destroy()` | Tear down. |
+| `update(options)` | Merge options & re-render. |
+| `updateTask(id, patch)` | Surgical patch. Faster than `update()`. |
+| `zoomIn()` / `zoomOut()` | Step through view modes. |
+| `getSelectedTasks()` | `Task[]`. Needs `enableSelection`. |
+| `setSelectedTasks(ids)` | Replace selection. |
+| `clearSelection()` | Reset selection. |
+| `renderToolbar(container)` | Custom toolbar slot. |
+| `isDestroyed()` | Guard. |
+| `ApexGantt.setLicense(key)` | Static; call once. |
+
+---
+
+## Events (on container element)
+
+```js
+container.addEventListener(GanttEvents.TASK_UPDATE_SUCCESS, (e) => {
+  const { taskId, updatedTask } = e.detail;
+});
+```
+
+| Constant | Event name |
+|---|---|
+| `TASK_UPDATE` | `taskUpdate` |
+| `TASK_VALIDATION_ERROR` | `taskValidationError` |
+| `TASK_UPDATE_SUCCESS` | `taskUpdateSuccess` |
+| `TASK_UPDATE_ERROR` | `taskUpdateError` |
+| `TASK_DRAGGED` | `taskDragged` |
+| `TASK_RESIZED` | `taskResized` |
+| `SELECTION_CHANGE` | `selectionChange` |
+| `DEPENDENCY_ARROW_UPDATE` | `dependencyArrowUpdate` |
+
+---
+
+## Pitfalls — ❌ Wrong vs ✅ Correct
+
+### 1. Date format mismatch
+❌ ISO dates with default `inputDateFormat`:
+`{ startTime: '2026-06-01', endTime: '2026-06-15' }` — bars don't render.
+✅ Set the format:
+`{ inputDateFormat: 'YYYY-MM-DD', series: [...] }`
+
+### 2. Missing render
+❌ `new ApexGantt(el, opts)` — nothing paints.
+✅ `const g = new ApexGantt(el, opts); g.render();`
+
+### 3. React / Vue cleanup
+❌ no `destroy()` in unmount — observer leak.
+✅ `useEffect(() => { const g = new ApexGantt(ref.current, opts); g.render(); return () => g.destroy(); }, [])`
+
+### 4. `update()` for one progress change
+❌ `gantt.update({ series: tasks.map(...) })` — full re-layout.
+✅ `gantt.updateTask('t3', { progress: 75 })`.
+
+### 5. Milestone with `endTime`
+❌ `{ type: 'milestone', startTime: 'X', endTime: 'Y' }` — renders as a bar.
+✅ `{ type: 'milestone', startTime: 'X' }`.
+
+### 6. Listening on the gantt instance
+❌ `gantt.addEventListener(...)` — `gantt` is not an `EventTarget`.
+✅ `container.addEventListener(GanttEvents.TASK_DRAGGED, h)`.
+
+### 7. Selection without `enableSelection`
+❌ `getSelectedTasks()` returns `[]`.
+✅ pass `enableSelection: true` in options.
+
+### 8. `progress` as fraction
+❌ `progress: 0.75` → 1% bar.
+✅ `progress: 75`.
+
+### 9. Orphan `parentId`
+❌ `parentId` referencing a non-existent id — silently flattened.
+✅ Ensure every `parentId` matches an `id` in the same `series`.
+
+### 10. License key skipped
+❌ Watermark in production.
+✅ `ApexGantt.setLicense('KEY')` once at app startup.
+
+### 11. Direct mutation of `series`
+❌ `options.series.push(newTask)` — chart doesn't refresh.
+✅ `gantt.update({ series: [...options.series, newTask] })`.
+
+### 12. Manual data transforms
+❌ `tasks.map(t => ({ id: t.task_id, name: t.title, ... }))` boilerplate.
+✅ `parsing: { id: 'task_id', name: 'title', startTime: 'start_date', endTime: 'end_date' }`.
+
+---
+
+## Framework Wrappers
+
+```bash
+npm install react-apexgantt   # React
+npm install vue-apexgantt     # Vue 3
+npm install ngx-apexgantt     # Angular
+```
+
+All wrappers call `destroy()` automatically on unmount and forward typed events from `GanttEventMap`.
