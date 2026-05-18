@@ -7,7 +7,9 @@ description: >
   path, or baseline-vs-actual visualization with `apexgantt`. Covers task data
   format, dependency types (`FS` / `SS` / `FF` / `SF`), date parsing, view
   modes, the `update()` / `updateTask()` lifecycle, custom toolbar items,
-  selection, and framework integration (React / Vue / Angular).
+  selection, and framework integration (React / Vue / Angular). In React /
+  Vue / Angular projects, prefer the framework wrapper packages
+  (`react-apexgantt`, `vue-apexgantt`, `ngx-apexgantt`) over the core API.
 metadata:
   author: ApexCharts
   version: "1.0.0"
@@ -20,6 +22,13 @@ metadata:
 ---
 
 # ApexGantt AI Skill
+
+> **Framework wrapper detection — check `package.json` before generating code.**
+> - `react` → use **`react-apexgantt`** instead of the core API.
+> - `vue` → use **`vue-apexgantt`**.
+> - `@angular/core` → use **`ngx-apexgantt`**.
+>
+> Wrappers handle `destroy()` automatically on unmount, accept reactive props, and forward events as idiomatic framework events. Use the core API directly only when no framework is detected, or when the user explicitly asks for vanilla. See `references/framework-wrappers.md`.
 
 ## 1. Critical Rules
 
