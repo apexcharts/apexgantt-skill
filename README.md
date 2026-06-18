@@ -2,6 +2,16 @@
 
 AI coding skill for building [ApexGantt](https://apexcharts.com/docs/apexgantt/) timeline / Gantt charts. Works with Claude Code, Cursor, GitHub Copilot, and any AI coding assistant that can read project context.
 
+> **Separate skill — one of the ApexCharts ecosystem skills.** This is the dedicated skill for **ApexGantt** (`apexgantt`), shipped as its own `apexgantt-skill` package and repo — distinct from the core `apexcharts-skill` and the other product skills. Each product has its own library and skill; use the one that matches yours:
+>
+> | Product | npm library | Skill package & repo |
+> |---|---|---|
+> | ApexCharts — charts | `apexcharts` | [`apexcharts-skill`](https://github.com/apexcharts/apexcharts-skill) |
+> | **ApexGantt** — Gantt / timeline · *this skill* | `apexgantt` | `apexgantt-skill` |
+> | ApexTree — hierarchy / org charts | `apextree` | [`apextree-skill`](https://github.com/apexcharts/apextree-skill) |
+> | ApexSankey — flow / Sankey | `apexsankey` | [`apexsankey-skill`](https://github.com/apexcharts/apexsankey-skill) |
+> | Apex Grid — data grid | `apex-grid` | [`apexgrid-skill`](https://github.com/apexcharts/apexgrid-skill) |
+
 ## What This Does
 
 AI models routinely get Gantt-chart code wrong: bad date formats, missing `render()` calls, listening for events on the wrong target, mutating `series` in place, treating `progress` as a fraction. This skill ships structured reference files so the assistant generates correct ApexGantt code on the first try.
