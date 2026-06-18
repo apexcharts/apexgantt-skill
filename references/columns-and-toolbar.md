@@ -56,7 +56,7 @@ columnConfig: [
 
 ## Custom toolbar items
 
-The built-in toolbar carries zoom in/out, view-mode, and an export button. Add custom controls via `toolbarItems`.
+The built-in toolbar carries zoom in/out and an export button. Add custom controls via `toolbarItems`.
 
 ### Button
 

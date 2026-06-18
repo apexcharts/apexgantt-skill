@@ -22,7 +22,7 @@ function ProjectTimeline() {
     <Gantt
       series={tasks}
       inputDateFormat="YYYY-MM-DD"
-      viewMode="Week"
+      pixelsPerDay={25.7}
       enableSelection
       onTaskUpdateSuccess={(e) => console.log('saved', e.detail.updatedTask)}
       onTaskDragged={(e) => console.log('moved', e.detail.daysMoved)}
@@ -85,7 +85,7 @@ function onTaskDragged(e) {
   <VueGantt
     :series="tasks"
     input-date-format="YYYY-MM-DD"
-    view-mode="Week"
+    :pixels-per-day="25.7"
     enable-selection
     @task-update-success="(e) => console.log('saved', e.detail.updatedTask)"
     @task-dragged="onTaskDragged"
@@ -120,7 +120,7 @@ import type { TaskInput, TaskDraggedEventDetail } from 'apexgantt';
     <ngx-apexgantt
       [series]="tasks"
       inputDateFormat="YYYY-MM-DD"
-      viewMode="Week"
+      [pixelsPerDay]="25.7"
       [enableSelection]="true"
       (taskUpdateSuccess)="onSaved($event)"
       (taskDragged)="onDragged($event)">

@@ -13,7 +13,7 @@ description: >
 metadata:
   author: ApexCharts
   version: "1.0.0"
-  library_version: ">=1.0.0"
+  library_version: "3.11.1"
   category: data-visualization
   tags: [gantt, timeline, project-management, scheduling, charts, svg, apexgantt]
   docs: https://apexcharts.com/docs/apexgantt/
@@ -128,7 +128,7 @@ const gantt = new ApexGantt(el, {
 |---|---|---|---|
 | `series` | `TaskInput[]` | **required** | Task data. |
 | `theme` | `'light' \| 'dark'` | `'light'` | Built-in palette. |
-| `viewMode` | `ViewMode` | `Month` | `Day`, `Week`, `Month`, `Quarter`, `Year`. |
+| `pixelsPerDay` | `number` | auto-fit | Initial zoom as pixels-per-day (continuous; header tiers auto-chosen). Reference values: Year ≈ `0.5`, Quarter ≈ `1.6`, Month ≈ `4.9`, Week ≈ `25.7`, Day = `80`. Omit to auto-fit the data range. |
 | `inputDateFormat` | `string` | `'MM-DD-YYYY'` | dayjs format for `startTime`/`endTime`. |
 | `width` / `height` | `number \| string` | `'100%'` / `500` | Pixel number or CSS string. |
 | `rowHeight` | `number` | `28` | px |
@@ -150,25 +150,25 @@ const gantt = new ApexGantt(el, {
 ## 4. Lifecycle Pattern
 
 ```js
-import { ApexGantt, ViewMode } from 'apexgantt';
+import { ApexGantt } from 'apexgantt';
 
 const gantt = new ApexGantt(document.getElementById('chart'), {
   series: tasks,
-  viewMode: ViewMode.Week,
+  pixelsPerDay: 25.7,                        // ≈ week density; omit to auto-fit
   inputDateFormat: 'YYYY-MM-DD',
 });
 
 gantt.render();                              // REQUIRED — paint to DOM
 
-gantt.update({ viewMode: ViewMode.Day });    // merge new options + re-render
+gantt.update({ pixelsPerDay: 80 });          // merge new options + re-render (80 = day density)
 gantt.updateTask('t1', { progress: 75 });    // surgical single-task patch
-gantt.zoomIn();                              // Day → Week → Month → Quarter → Year
-gantt.zoomOut();
+gantt.zoomIn();                              // raise pixelsPerDay (toward day-level detail)
+gantt.zoomOut();                             // lower pixelsPerDay (toward year overview)
 
 gantt.destroy();                             // free observers + DOM
 ```
 
-`update()` preserves scroll position, collapsed/expanded state, and current view mode unless you explicitly override them.
+`update()` preserves scroll position, collapsed/expanded state, and current zoom (`pixelsPerDay`) unless you explicitly override them.
 
 ---
 

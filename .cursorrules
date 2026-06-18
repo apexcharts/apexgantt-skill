@@ -66,19 +66,19 @@ gantt.render();
 ## Lifecycle
 
 ```js
-import { ApexGantt, ViewMode, GanttEvents } from 'apexgantt';
+import { ApexGantt, GanttEvents } from 'apexgantt';
 
 ApexGantt.setLicense('KEY');                      // optional, once at app startup
 
 const gantt = new ApexGantt(el, {
   series: tasks,
-  viewMode: ViewMode.Week,
+  pixelsPerDay: 25.7,                             // ≈ week density; omit to auto-fit
   inputDateFormat: 'YYYY-MM-DD',
 });
 gantt.render();                                   // REQUIRED
-gantt.update({ viewMode: ViewMode.Day });         // merge + re-render
+gantt.update({ pixelsPerDay: 80 });               // merge + re-render (80 = day density)
 gantt.updateTask('t1', { progress: 75 });         // fast single-task patch
-gantt.zoomIn(); gantt.zoomOut();                  // Day↔Week↔Month↔Quarter↔Year
+gantt.zoomIn(); gantt.zoomOut();                  // raise / lower pixelsPerDay (day ↔ year)
 gantt.destroy();                                  // free observers + DOM
 ```
 
@@ -92,7 +92,7 @@ gantt.destroy();                                  // free observers + DOM
 | `destroy()` | Tear down. |
 | `update(options)` | Merge options & re-render. |
 | `updateTask(id, patch)` | Surgical patch. Faster than `update()`. |
-| `zoomIn()` / `zoomOut()` | Step through view modes. |
+| `zoomIn()` / `zoomOut()` | Raise / lower `pixelsPerDay` (continuous zoom). |
 | `getSelectedTasks()` | `Task[]`. Needs `enableSelection`. |
 | `setSelectedTasks(ids)` | Replace selection. |
 | `clearSelection()` | Reset selection. |

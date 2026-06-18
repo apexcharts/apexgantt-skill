@@ -98,10 +98,7 @@ const tasks = [
   { id: 'frontend',name: 'Frontend',   startTime: '01-20-2026', endTime: '02-15-2026', progress: 40,
     dependency: { taskId: 'design', type: 'FS', lag: 4 } },     // 4-day buffer
   { id: 'qa',      name: 'QA',         startTime: '02-16-2026', endTime: '03-01-2026', progress: 0,
-    dependency: [
-      { taskId: 'backend',  type: 'FS' },
-      { taskId: 'frontend', type: 'FS' }
-    ] },
+    dependency: { taskId: 'frontend', type: 'FS' } },   // one predecessor per task
   { id: 'launch',  name: 'Launch',     startTime: '03-05-2026', type: 'milestone',
     dependency: 'qa' },
 ];
@@ -113,4 +110,4 @@ const gantt = new ApexGantt(document.getElementById('chart'), {
 gantt.render();
 ```
 
-> Note: `dependency` accepts a single value or an array of values. Each entry in the array is independently a string id or a `TaskDependency` object.
+> Note: a task takes **one** `dependency` — either a task-ID string (Finish-to-Start, 0 lag) or a `TaskDependency` object `{ taskId, type, lag }`. Arrays are **not** supported in 3.11.x (the value is read as a single dependency); give each task a single predecessor.
