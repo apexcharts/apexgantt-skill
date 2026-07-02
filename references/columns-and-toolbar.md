@@ -2,7 +2,7 @@
 
 ## Column configuration
 
-The task-list panel shows configurable columns. By default all five built-in columns render in this order:
+The task-list panel shows configurable columns. By default these five columns render in this order:
 
 1. `Name`
 2. `StartTime`
@@ -53,6 +53,38 @@ columnConfig: [
   { key: ColumnKey.Progress },
 ],
 ```
+
+### Built-in column keys
+
+`ColumnKey` values: `Name`, `StartTime`, `EndTime`, `Duration`, `Progress`, plus (3.12.0) `ProgressRing` (a circular progress gauge) and `Wbs` (auto-numbered work-breakdown outline, e.g. `1.2.1`). The five listed at the top are the default-rendered set; `ProgressRing`/`Wbs` are opt-in via `columnConfig`.
+
+### Custom columns & built-in renderers (3.12.0)
+
+A `ColumnListItem.key` can be a **custom string** (instead of a `ColumnKey`) paired with a `render(ctx) => string` returning an HTML string. Use the exported `escapeHtml` helper for any task data you interpolate:
+
+```js
+import { ApexGantt, ColumnKey, renderers, escapeHtml } from 'apexgantt';
+
+columnConfig: [
+  { key: ColumnKey.Name, title: 'Task' },
+  { key: 'owner', title: 'Owner', render: (ctx) => `<span>${escapeHtml(ctx.task.name)}</span>` },
+]
+```
+
+Two ready-made renderers ship in the `renderers` namespace:
+
+```js
+// Stacked assignee avatars — reads TaskInput.assignees (see data-format.md)
+{ key: 'team', title: 'Team',
+  render: renderers.avatars({ accessor: (task) => task.assignees, max: 4 }) }
+
+// Circular progress ring
+{ key: ColumnKey.ProgressRing, title: 'Done',
+  render: renderers.progressRing({ size: 32, showLabel: true }) }
+```
+
+- `renderers.avatars(options)` — `{ accessor: (task) => Assignee[], max?: 4, size?: 24, overlap?: 8, borderColor?, fallbackColor? }`.
+- `renderers.progressRing(options?)` — `{ accessor?: (task) => number /* default task.progress */, size?: 32, strokeWidth?: 3, progressColor?, trackColor?, showLabel?: true, labelColor? }`.
 
 ## Custom toolbar items
 

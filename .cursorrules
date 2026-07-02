@@ -177,6 +177,19 @@ container.addEventListener(GanttEvents.TASK_UPDATE_SUCCESS, (e) => {
 
 ---
 
+## New in 3.12.0
+
+- **CRUD** (all undoable, fire events, pass optional `before*` veto hooks): `addTask(input, {parentId?})`, `deleteTask(id, {cascade?: 'forbid'|'children'|'orphan'})`, `moveTask(id, {newParentId?})`, `addDependency(from, to, {type?, lag?})`, `removeDependency(from, to)`, `canAddDependency(...)`.
+- **Undo/redo**: `history: { enabled, maxSize }` (on by default) + `undo()`/`redo()`/`canUndo()`/`canRedo()`/`clearHistory()`/`getHistorySize()` + `historyChange` event.
+- **Working calendar**: `calendar: { workingWeekdays, holidays, showNonWorkingStripes, dragSnapMode }`; `TaskDependency.lagUnit: 'working'|'calendar'`.
+- **Sub-day scheduling**: `snapUnit: 'day'|'hour'|'minute'` + `snapValue` (needs time tokens in `inputDateFormat`).
+- **Interaction toggles**: `enableInlineEdit`, `enableProgressDrag` (→ `taskProgressChanged`), `enableTaskEditingShortcuts`, `enableTaskCRUDToolbar`, `enableContextMenu`, `enableAddTaskRow`.
+- **Visual**: `enableProjectBoundary`/`projectBoundaryColor`, `enableCrosshair`/`crosshairColor`, `enableRollups`, `barLabel`, `columnLines`.
+- **Columns**: `ColumnKey.ProgressRing`/`Wbs`; `renderers.avatars`/`renderers.progressRing` + `escapeHtml`; `TaskInput.assignees`/`showSummaryBar`.
+- Full detail: `references/editing.md`.
+
+---
+
 ## Framework Wrappers
 
 ```bash

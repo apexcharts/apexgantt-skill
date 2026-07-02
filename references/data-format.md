@@ -18,6 +18,8 @@ interface TaskInput {
   barBackgroundColor?: string;             // per-task override
   rowBackgroundColor?: string;             // per-row override
   collapsed?: boolean;                     // hide children initially
+  showSummaryBar?: boolean;                // default true; see below (summary/group rows)
+  assignees?: Assignee[];                  // for the renderers.avatars column; see columns-and-toolbar.md
 }
 ```
 
@@ -84,6 +86,40 @@ const gantt = new ApexGantt(el, {
 ```
 
 A thin secondary bar is rendered below the actual bar so schedule slip is immediately visible.
+
+## Summary (group) bars
+
+A parent task (one that has children via `parentId`) renders as a summary bar
+by default. Its date range is computed automatically from the earliest start
+and latest end of all descendants — the parent's own `startTime`/`endTime` are
+ignored (a warning is logged if both are set). Summary bars are always
+read-only: drag, resize, and progress are disabled.
+
+Set `showSummaryBar: false` on the parent to suppress the derived-span bar for
+that row.
+
+```js
+{ id: 'phase1', name: 'Phase 1', startTime: '01-01-2026', showSummaryBar: true }  // default
+```
+
+## Assignees
+
+Attach people/teams to a task for the built-in `renderers.avatars` column. The
+library does not interpret these directly — they only render when an
+avatar-style column is configured via `columnConfig` (see
+`references/columns-and-toolbar.md`).
+
+```js
+{
+  id: 't1', name: 'Design', startTime: '01-01-2026', endTime: '01-15-2026',
+  assignees: [
+    { name: 'Ada Lovelace', avatarUrl: '/u/ada.png' },
+    { name: 'Alan Turing', initials: 'AT', color: '#6366F1' },  // initials fallback when no avatarUrl
+  ],
+}
+```
+
+`Assignee`: `{ name; avatarUrl?; initials?; color? }`.
 
 ## Per-task styling overrides
 

@@ -20,6 +20,7 @@ export const referenceFiles = [
   'columns-and-toolbar.md',
   'data-format.md',
   'dependencies.md',
+  'editing.md',
   'events.md',
   'framework-wrappers.md',
 ];

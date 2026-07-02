@@ -12,8 +12,8 @@ description: >
   (`react-apexgantt`, `vue-apexgantt`, `ngx-apexgantt`) over the core API.
 metadata:
   author: ApexCharts
-  version: "1.2.0"
-  library_version: "3.11.1"
+  version: "1.3.0"
+  library_version: "3.12.0"
   category: data-visualization
   tags: [gantt, timeline, project-management, scheduling, charts, svg, apexgantt]
   docs: https://apexcharts.com/docs/apexgantt/
@@ -130,6 +130,10 @@ const gantt = new ApexGantt(el, {
 | `theme` | `'light' \| 'dark'` | `'light'` | Built-in palette. |
 | `pixelsPerDay` | `number` | auto-fit | Initial zoom as pixels-per-day (continuous; header tiers auto-chosen). Reference values: Year ≈ `0.5`, Quarter ≈ `1.6`, Month ≈ `4.9`, Week ≈ `25.7`, Day = `80`. Omit to auto-fit the data range. |
 | `inputDateFormat` | `string` | `'MM-DD-YYYY'` | dayjs format for `startTime`/`endTime`. |
+| `snapUnit` | `'day' \| 'hour' \| 'minute'` | `'day'` | Granularity that drag / resize / inline edits snap to. `'hour'`/`'minute'` enable sub-day scheduling. See §10. |
+| `snapValue` | `number` | `1` | Multiplier on `snapUnit` (e.g. `'minute'` + `15` → 15-min steps). |
+| `calendar` | `CalendarOptions` | none | Working-calendar (weekends, holidays, non-working stripes, drag snap). See §10. |
+| `history` | `{ enabled, maxSize }` | `{ enabled: true, maxSize: 100 }` | Undo/redo stack config. See §11. |
 | `width` / `height` | `number \| string` | `'100%'` / `500` | Pixel number or CSS string. |
 | `rowHeight` | `number` | `28` | px |
 | `tasksContainerWidth` | `number` | `425` | Initial task-list panel width in px. |
@@ -137,8 +141,22 @@ const gantt = new ApexGantt(el, {
 | `enableTaskDrag` | `boolean` | `true` | Reorder rows by dragging. |
 | `enableTaskResize` | `boolean` | `true` | Resize bars by dragging handles. |
 | `enableTaskEdit` | `boolean` | `false` | Inline edit form on row click. |
+| `enableInlineEdit` | `boolean` | `false` | Edit `name`/`startTime`/`endTime`/`duration`/`progress` directly in list cells. Auto-on when `enableTaskEdit` is `true` unless set `false`. |
+| `enableProgressDrag` | `boolean` | `true` | Drag the in-bar handle to set progress. Fires `taskProgressChanged`. |
 | `enableSelection` | `boolean` | `false` | Multi-row selection. Required for selection APIs. |
+| `enableTaskEditingShortcuts` | `boolean` | `false` | `Delete`/`Backspace` delete focused row; `Tab`/`Shift+Tab` indent/outdent. Needs list focus. |
+| `enableTaskCRUDToolbar` | `boolean` | `false` | Built-in `+ Add Task` / trash `Delete` toolbar buttons. Delete needs `enableSelection`. |
+| `enableContextMenu` | `boolean` | `false` | Right-click menu: Edit, Add child/sibling, Indent, Outdent, Delete (capability-gated). |
+| `enableAddTaskRow` | `boolean` | `false` | `+ Add task` row at the bottom of the list. Disabled while virtualising (≥ 50 rows). |
 | `enableCriticalPath` | `boolean` | `false` | Compute & highlight CPM through dependencies. |
+| `enableRollups` | `boolean` | `false` | Thin rollup markers under summary bars at each leaf's range (visible even when collapsed). |
+| `enableProjectBoundary` | `boolean` | `false` | Two vertical lines at the project's earliest start / latest end. |
+| `projectBoundaryColor` | `string` | `'#7C3AED'` | Stroke for the boundary lines. Falls back to `annotationBorderColor`. |
+| `enableCrosshair` | `boolean` | `false` | Vertical cursor-following line + date/time label. |
+| `crosshairColor` | `string` | theme accent | Crosshair line and label-background color. |
+| `crosshairLabelFormat` | `(date, tier) => string` | auto | Custom crosshair label formatter; `tier` is the active header tier. |
+| `barLabel` | `BarLabelOptions` | `{ position: 'right' }` | Per-task bar label: `position` `'right'\|'inside'\|'left'\|'auto'`, `field`, `render`, `className`, `leadingPadding`. |
+| `columnLines` | `boolean` | `true` | Draw vertical lines between timeline columns. `false` keeps only row dividers. |
 | `baseline` | `{ enabled, color }` | disabled | See §2. |
 | `parsing` | `ParsingConfig` | — | Field-mapping to avoid manual transforms. |
 | `toolbarItems` | `ToolbarItem[]` | `[]` | Custom toolbar buttons / selects / separators. |
@@ -181,6 +199,16 @@ gantt.destroy();                             // free observers + DOM
 | `render(_data?)` | Paints the chart. Returns the container `HTMLElement`. Call once after construction. |
 | `update(options)` | Merge new options & re-render. Unspecified keys keep current values. |
 | `updateTask(id, patch)` | Surgical single-task update. Throws if `id` not found. |
+| `addTask(input, { parentId? })` | Insert a task (recorded in history). Returns the `Task`, or `null` if `beforeTaskAdd` vetoed. Throws on duplicate `id`. |
+| `deleteTask(id, { cascade? })` | Remove a task. `cascade`: `'forbid'` (default, throws if it has children), `'children'`, `'orphan'`. Returns `false` if `beforeTaskDelete` vetoed. |
+| `moveTask(id, { newParentId? })` | Re-parent (`null`/omit → root). Returns `false` if `beforeTaskMove` vetoed. Throws on cycle / missing id. |
+| `addDependency(fromId, toId, { type?, lag? })` | Create an edge. Returns `false` if `beforeDependencyChange` vetoed. Throws on missing task / duplicate. |
+| `removeDependency(fromId, toId)` | Remove an edge. Returns `false` if vetoed. Throws when no edge exists. |
+| `canAddDependency(fromId, toId, opts?)` | Dry-run check. Returns `{ ok: true }` or `{ ok: false, reason }` (`'self'`/`'task-missing'`/`'duplicate'`/`'cycle'`/`'summary-descendant'`/`'hook-veto'`). |
+| `undo()` / `redo()` | Traverse the history stack. No-op (returns `false`) when the stack is empty or `history.enabled` is `false`. |
+| `canUndo()` / `canRedo()` | Whether a transaction is available to undo / redo. Gate toolbar buttons off these. |
+| `clearHistory()` | Empty both stacks. Fires `historyChange` with `kind: 'clear'`. |
+| `getHistorySize()` | `{ undo, redo }` stack sizes. |
 | `zoomIn()` / `zoomOut()` | Step through `Day → Week → Month → Quarter → Year`. |
 | `getSelectedTasks()` | Array of selected `Task` objects. Requires `enableSelection: true`. |
 | `setSelectedTasks(ids)` | Replace selection by id array. |
@@ -225,8 +253,15 @@ container.addEventListener(GanttEvents.TASK_DRAGGED, (e) => {
 | `GanttEvents.TASK_UPDATE_ERROR` | `taskUpdateError` | Update threw. |
 | `GanttEvents.TASK_DRAGGED` | `taskDragged` | Bar dropped at a new position. |
 | `GanttEvents.TASK_RESIZED` | `taskResized` | Bar resized via a handle. |
+| `GanttEvents.TASK_PROGRESS_CHANGED` | `taskProgressChanged` | In-bar progress handle dragged. |
+| `GanttEvents.TASK_ADDED` | `taskAdded` | Task inserted via `addTask()` / toolbar / context menu. |
+| `GanttEvents.TASK_DELETED` | `taskDeleted` | Task removed via `deleteTask()`. One event per removed task on cascade. |
+| `GanttEvents.TASK_MOVED` | `taskMoved` | Task re-parented via `moveTask()`. |
+| `GanttEvents.DEPENDENCY_ADDED` | `dependencyAdded` | Edge created via `addDependency()`. |
+| `GanttEvents.DEPENDENCY_REMOVED` | `dependencyRemoved` | Edge removed via `removeDependency()`. |
 | `GanttEvents.SELECTION_CHANGE` | `selectionChange` | Selection set changed. |
-| `GanttEvents.DEPENDENCY_ARROW_UPDATE` | `dependencyArrowUpdate` | Dependency edited via the arrow tool. |
+| `GanttEvents.DEPENDENCY_ARROW_UPDATE` | `dependencyArrowUpdate` | Internal arrow-redraw signal (task moved). Not a CRUD event. |
+| `GanttEvents.HISTORY_CHANGE` | `historyChange` | Undo/redo stack changed (`kind`: `'record'`/`'undo'`/`'redo'`/`'clear'`). |
 
 ---
 
@@ -396,14 +431,83 @@ Supported parse keys: `id`, `name`, `startTime`, `endTime`, `progress`, `type`, 
 
 ---
 
-## 9. Reference Routing Table
+## 9. Working Calendar & Sub-Day Scheduling
+
+### `calendar` (`CalendarOptions`)
+
+When set, weekends + holidays drive duration math, summary aggregation, and timeline stripes. Absent = every day is a working day.
+
+```js
+new ApexGantt(el, {
+  series: tasks,
+  calendar: {
+    workingWeekdays: [1, 2, 3, 4, 5],          // 0=Sun … 6=Sat; default Mon–Fri
+    holidays: ['12-25-2026', { date: '01-01-2027', label: 'New Year' }],
+    showNonWorkingStripes: true,               // hatched bands over non-working columns; default true
+    holidayTooltip: ({ date, label }) => `<b>${label ?? 'Holiday'}</b>`,
+    dragSnapMode: 'next',                       // 'next' (default) | 'previous' | 'allow'
+  },
+});
+```
+
+`dragSnapMode` controls what happens when a drag/resize lands on a non-working day: `'next'`/`'previous'` snap to the adjacent working day (drag preserves working-day duration), `'allow'` permits it. `TaskDependency.lagUnit` defaults to `'working'` when a calendar is set — lag counts working days only; set `'calendar'` to force raw calendar days.
+
+### `snapUnit` / `snapValue` (sub-day)
+
+Granularity that drag/resize/inline edits snap to — independent of the header tier (which follows `pixelsPerDay`).
+
+```js
+new ApexGantt(el, {
+  inputDateFormat: 'YYYY-MM-DD HH:mm',   // include time tokens for sub-day work
+  snapUnit: 'minute',
+  snapValue: 15,                         // 15-minute increments
+  series: tasks,
+});
+```
+
+With `'hour'`/`'minute'`, `endTime` is treated as the exclusive end timestamp and `taskDragged.daysMoved` becomes fractional (a 6-hour move reports `0.25`). `'day'` (default) treats `endTime` as inclusive.
+
+---
+
+## 10. Editing: CRUD, Undo/Redo & Interaction Toggles
+
+Programmatic CRUD, all recorded in the undo history, all firing events and passing through optional veto hooks. See `references/editing.md` for full detail.
+
+```js
+gantt.addTask({ id: 't9', name: 'Review', startTime: '08-01-2026', endTime: '08-05-2026' });
+gantt.addTask({ id: 'subA', name: 'Sub', startTime: '08-01-2026', endTime: '08-03-2026' }, { parentId: 't9' });
+gantt.deleteTask('t9', { cascade: 'children' });   // 'forbid' (default) | 'children' | 'orphan'
+gantt.moveTask('subA', { newParentId: null });     // re-parent to root
+gantt.addDependency('t1', 't2', { type: 'FS', lag: 2 });
+if (gantt.canAddDependency('t1', 't2').ok) { /* … */ }
+gantt.removeDependency('t1', 't2');
+```
+
+**Undo/redo** — every mutating call (drag, resize, progress, edit, add/delete/move, dependency change) is recorded unless `history: { enabled: false }`. Ctrl/Cmd+Z / Ctrl+Y work inside the chart automatically.
+
+```js
+gantt.undo(); gantt.redo();
+if (gantt.canUndo()) { /* enable Undo button */ }
+container.addEventListener(GanttEvents.HISTORY_CHANGE, (e) => {
+  const { kind, canUndo, canRedo } = e.detail;   // keep external buttons in sync
+});
+```
+
+**Veto hooks** — synchronous; return `false` to cancel: `beforeTaskAdd`, `beforeTaskUpdate`, `beforeTaskMove`, `beforeTaskDelete`, `beforeDependencyChange`.
+
+**Interaction toggles** expose the same operations to the user: `enableInlineEdit`, `enableProgressDrag`, `enableTaskEditingShortcuts`, `enableTaskCRUDToolbar`, `enableContextMenu`, `enableAddTaskRow` (see §3).
+
+---
+
+## 11. Reference Routing Table
 
 For deeper detail and full working examples, refer to:
 
 | Topic | Reference File |
 |---|---|
-| Task data, hierarchy, milestones, baseline | `references/data-format.md` |
-| Dependencies (`FS`/`SS`/`FF`/`SF`), critical path | `references/dependencies.md` |
-| Column config, custom toolbar items, parsing | `references/columns-and-toolbar.md` |
-| Events, selection, inline edit, drag/resize | `references/events.md` |
+| Task data, hierarchy, milestones, baseline, assignees, summary bars | `references/data-format.md` |
+| Dependencies (`FS`/`SS`/`FF`/`SF`), lag units, critical path | `references/dependencies.md` |
+| Column config, `ProgressRing` / `Wbs`, `renderers`, custom toolbar items, parsing | `references/columns-and-toolbar.md` |
+| Events, selection, inline edit, drag/resize, progress drag | `references/events.md` |
+| CRUD API, undo/redo, calendar, sub-day scheduling, interaction toggles | `references/editing.md` |
 | React, Vue 3, Angular wrappers | `references/framework-wrappers.md` |

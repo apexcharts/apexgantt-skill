@@ -28,7 +28,20 @@ interface TaskDependency {
   taskId: string;                          // REQUIRED, id of predecessor
   type?: 'FS' | 'SS' | 'FF' | 'SF';        // default 'FS'
   lag?: number;                            // days; positive = lag, negative = lead
+  lagUnit?: 'working' | 'calendar';        // how lag counts days; see below
 }
+```
+
+### `lagUnit` (3.12.0)
+
+Controls how `lag` counts days. When a working calendar is configured
+(`GanttUserOptions.calendar`), the default is `'working'` — lag skips weekends
+and holidays. Without a calendar, working and calendar days coincide so the
+setting has no effect. Force raw calendar-day lag with `'calendar'`.
+
+```js
+{ id: 't2', name: 'Develop', startTime: '01-16-2026', endTime: '02-15-2026',
+  dependency: { taskId: 't1', type: 'FS', lag: 2, lagUnit: 'calendar' } }
 ```
 
 ```js
