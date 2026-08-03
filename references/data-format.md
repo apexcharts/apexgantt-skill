@@ -69,6 +69,34 @@ import { TaskType } from 'apexgantt';
 { id: 'launch', name: 'Launch', startTime: '06-15-2026', type: TaskType.Milestone }
 ```
 
+## Split tasks (worked segments)
+
+A task can be split into several **worked segments** separated by gaps on a single row (work Mon–Wed, pause, resume Fri). Pass `segments`, an array of `TaskSegment` objects. **Each segment uses `start` / `end`, not `startTime` / `endTime`:**
+
+```js
+{
+  id: 't1', name: 'Build',
+  segments: [
+    { start: '2026-06-01', end: '2026-06-04' },
+    { start: '2026-06-08', end: '2026-06-12' },
+  ],
+}
+```
+
+`TaskSegment`: `{ start: string; end: string }` (both parsed with `inputDateFormat`).
+
+The task's own `startTime` / `endTime` are the **envelope** (first segment start → last segment end) and are derived automatically, so summary rollups, dependencies, the timeline header, and the Duration column all keep working. The bar draws one filled piece per segment joined by a thin connector; progress fills the worked spans left to right. Dragging moves all segments together; resizing adjusts the outer segment.
+
+Split (or unsplit) at runtime:
+
+```js
+gantt.splitTask('t1', '2026-06-08', { resumeAt: '2026-06-12' });  // cut at a date, resume later
+gantt.updateTask('t1', { segments: [] });                         // back to one contiguous bar
+gantt.isSplit('t1');                                              // → boolean
+```
+
+`splitTask()` routes through `updateTask`, so it is validated, undoable, and emits `taskUpdate`. It is a no-op on milestones, summary bars, or when the split date does not fall strictly inside a worked span. (Deferred: interactive split gesture, per-segment drag/resize, gap-aware critical path.)
+
 ## Baseline (planned vs. actual)
 
 Enable globally, then attach `baseline: { start, end }` to any task you want to compare against its plan:

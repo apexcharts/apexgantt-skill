@@ -12,8 +12,8 @@ description: >
   (`react-apexgantt`, `vue-apexgantt`, `ngx-apexgantt`) over the core API.
 metadata:
   author: ApexCharts
-  version: "1.3.0"
-  library_version: "3.12.0"
+  version: "1.4.0"
+  library_version: "3.17.1"
   category: data-visualization
   tags: [gantt, timeline, project-management, scheduling, charts, svg, apexgantt]
   docs: https://apexcharts.com/docs/apexgantt/
@@ -67,8 +67,11 @@ metadata:
   barBackgroundColor?: string;      // per-task override
   rowBackgroundColor?: string;      // per-row override
   collapsed?: boolean;              // hide children
+  segments?: { start: string; end: string }[];  // split task into worked spans; see references/data-format.md
 }
 ```
+
+> **Split tasks:** pass `segments` (each `{ start, end }`) to render one task as several worked spans with gaps on a single row. `startTime`/`endTime` become the derived envelope. Split at runtime with `gantt.splitTask(id, at, { resumeAt })`. See `references/data-format.md`.
 
 Minimal example:
 
@@ -135,9 +138,19 @@ const gantt = new ApexGantt(el, {
 | `calendar` | `CalendarOptions` | none | Working-calendar (weekends, holidays, non-working stripes, drag snap). See §10. |
 | `history` | `{ enabled, maxSize }` | `{ enabled: true, maxSize: 100 }` | Undo/redo stack config. See §11. |
 | `width` / `height` | `number \| string` | `'100%'` / `500` | Pixel number or CSS string. |
-| `rowHeight` | `number` | `28` | px |
+| `rowHeight` | `number` | `40` | px |
 | `tasksContainerWidth` | `number` | `425` | Initial task-list panel width in px. |
 | `columnConfig` | `ColumnListItem[]` | (all) | Authoritative; only listed columns render. |
+| `autoSizeColumns` | `boolean` | `true` | Auto-size each column to fit header + content, growing the panel (never below `tasksContainerWidth`). `false` = legacy split-by-`flexGrow`. See `references/grid.md`. |
+| `resizableColumns` | `boolean` | `true` | Drag a column-header handle to pin a column to an exact px width. |
+| `reorderableColumns` | `boolean` | `true` | Drag a column header to reorder columns. |
+| `sortBy` | `SortCriterion \| SortCriterion[]` | start-time asc | Initial sort (single or multi-key), hierarchy-preserving. Pass `[]` for natural (input) order. |
+| `filterBy` | `(task) => boolean` | — | Initial predicate filter (keeps matches + their ancestors). |
+| `filterRules` | `FilterRuleSet` | — | Initial structured filter `{ match: 'all'\|'any', rules }`. Takes precedence over `filterBy`. |
+| `enableQuickFilter` | `boolean` | `false` | Toolbar quick-filter search box. |
+| `quickFilter` | `QuickFilterOptions` | — | Tune the quick filter: `placeholder`, `fields` (default `['name']`), `caseSensitive`. |
+| `enableFilterBuilder` | `boolean` | `false` | Toolbar advanced filter builder (All/Any popover). |
+| `groupBy` | `GroupCriterion \| ColumnKey \| string` | — | Initial grouping by a column value. Suspends the tree into collapsible group headers. See `references/grid.md`. |
 | `enableTaskDrag` | `boolean` | `true` | Reorder rows by dragging. |
 | `enableTaskResize` | `boolean` | `true` | Resize bars by dragging handles. |
 | `enableTaskEdit` | `boolean` | `false` | Inline edit form on row click. |
@@ -148,6 +161,11 @@ const gantt = new ApexGantt(el, {
 | `enableTaskCRUDToolbar` | `boolean` | `false` | Built-in `+ Add Task` / trash `Delete` toolbar buttons. Delete needs `enableSelection`. |
 | `enableContextMenu` | `boolean` | `false` | Right-click menu: Edit, Add child/sibling, Indent, Outdent, Delete (capability-gated). |
 | `enableAddTaskRow` | `boolean` | `false` | `+ Add task` row at the bottom of the list. Disabled while virtualising (≥ 50 rows). |
+| `enableDrawTask` | `boolean` | `false` | Draw a new task by dragging across empty timeline space (snaps to `snapUnit`/`snapValue`). See `references/interaction.md`. |
+| `enableScrollButtons` | `boolean` | `false` | Edge chevrons that jump to an off-screen bar. (Default flipped to `false` in 3.15.0.) |
+| `scrollToTaskOnRowClick` | `boolean` | `false` | Clicking a task-list row scrolls its bar into view (nearest-edge). Composes with `enableSelection`. (New in 3.15.0.) |
+| `persistState` | `boolean \| { key }` | `false` | Persist/restore UI view state via `localStorage` (`true` = default key `'apexgantt-state'`). See `references/interaction.md`. |
+| `exportFormat` | `'svg' \| 'png' \| 'pdf'` | `'svg'` | Format for the toolbar export button. Any format is also available via `gantt.exportChart(format)`. |
 | `enableCriticalPath` | `boolean` | `false` | Compute & highlight CPM through dependencies. |
 | `enableRollups` | `boolean` | `false` | Thin rollup markers under summary bars at each leaf's range (visible even when collapsed). |
 | `enableProjectBoundary` | `boolean` | `false` | Two vertical lines at the project's earliest start / latest end. |
@@ -213,6 +231,23 @@ gantt.destroy();                             // free observers + DOM
 | `getSelectedTasks()` | Array of selected `Task` objects. Requires `enableSelection: true`. |
 | `setSelectedTasks(ids)` | Replace selection by id array. |
 | `clearSelection()` | Clear selection state. |
+| `sort(criteria)` | Apply a sort (single or multi `SortCriterion`; `[]` clears). Hierarchy-preserving. Emits `sortChange`. |
+| `clearSort()` / `getSort()` | Clear the sort (natural order) / read the active `SortCriterion[]`. |
+| `toggleSort(key, { append? })` | Header-click cycle asc → desc → none. `append: true` (Shift+click) adds a secondary key. |
+| `filter(predicate)` | Apply a view-only predicate filter (keeps matches + their ancestors). Emits `filterChange`. |
+| `setFilterRules(ruleSet)` | Apply a structured `FilterRuleSet` (pass `null`/empty to clear). Emits `filterChange`. |
+| `clearFilter()` / `isFiltered()` / `getFilterRules()` | Clear the filter / query filter state / read the active rules (or `null`). |
+| `groupBy(criterion)` | Group by a `ColumnKey`/string or `GroupCriterion`. Suspends the tree. Emits `groupChange`. |
+| `clearGrouping()` / `getGroupBy()` / `isGrouping()` | Restore the tree / read the active `GroupCriterion` (or `null`) / query grouping state. |
+| `setColumnWidth(key, px)` | Pin a column to an exact pixel width. Emits `columnResize`. |
+| `resetColumnWidths(key?)` / `getColumnWidths()` | Clear one (or all) manual widths / read them as `{ key: px }`. |
+| `setColumnOrder(keys)` / `getColumnOrder()` | Set / read the left-to-right column order. Emits `columnReorder`. |
+| `splitTask(id, at, { resumeAt? })` | Split a task into worked segments at `at` (routes through `updateTask`; undoable). No-op on milestones/summaries. |
+| `isSplit(id)` | Whether a task currently has multiple segments. |
+| `getState()` | Capture the UI view state as a serializable `GanttUiState`. |
+| `setState(state, { silent? })` | Restore a (partial) `GanttUiState`. Re-renders once; emits `sortChange`/`filterChange` unless `silent`. |
+| `scrollToTask(id)` | Scroll a task's bar into view (nearest-edge). Returns `false` if unknown / already visible. |
+| `exportChart(format?)` | Export as `'svg'`/`'png'`/`'pdf'` and trigger a download. Defaults to `exportFormat`. Returns a `Promise`. |
 | `renderToolbar(container)` | Render the built-in toolbar into a custom DOM slot. |
 | `destroy()` | Tear down. Required before unmounting in SPA frameworks. |
 | `isDestroyed()` | Guard before calling other methods. |
@@ -262,6 +297,11 @@ container.addEventListener(GanttEvents.TASK_DRAGGED, (e) => {
 | `GanttEvents.SELECTION_CHANGE` | `selectionChange` | Selection set changed. |
 | `GanttEvents.DEPENDENCY_ARROW_UPDATE` | `dependencyArrowUpdate` | Internal arrow-redraw signal (task moved). Not a CRUD event. |
 | `GanttEvents.HISTORY_CHANGE` | `historyChange` | Undo/redo stack changed (`kind`: `'record'`/`'undo'`/`'redo'`/`'clear'`). |
+| `GanttEvents.SORT_CHANGE` | `sortChange` | Sort changed. `detail`: `{ criteria: { key, direction }[], timestamp }`. |
+| `GanttEvents.FILTER_CHANGE` | `filterChange` | Filter changed. `detail`: `{ active, visibleCount, timestamp }`. |
+| `GanttEvents.GROUP_CHANGE` | `groupChange` | Grouping changed. `detail`: `{ active, field, groupCount, timestamp }`. |
+| `GanttEvents.COLUMN_RESIZE` | `columnResize` | Column width changed. `detail`: `{ key, width, widths, timestamp }` (`width` is `null` on reset). |
+| `GanttEvents.COLUMN_REORDER` | `columnReorder` | Column order changed. `detail`: `{ order, movedKey, timestamp }` (`movedKey` is `null` for bulk `setColumnOrder`). |
 
 ---
 
@@ -374,6 +414,8 @@ new ApexGantt(el, { series: tasks, enableSelection: true });
 import { ApexGantt } from 'apexgantt';
 ApexGantt.setLicense('YOUR_LICENSE_KEY');
 ```
+
+> **License signature verification (3.17.0+):** license keys issued since 2026-07-27 are ECDSA-signature-verified at runtime; a tampered key renders the chart with a watermark. Unsigned (older) keys remain valid until 2027-07-31. Use the exact key string ApexCharts issued you, verbatim.
 
 ### Pitfall 11: Mutating `series` in place
 
@@ -505,9 +547,11 @@ For deeper detail and full working examples, refer to:
 
 | Topic | Reference File |
 |---|---|
-| Task data, hierarchy, milestones, baseline, assignees, summary bars | `references/data-format.md` |
+| Task data, hierarchy, milestones, baseline, assignees, summary bars, split tasks | `references/data-format.md` |
 | Dependencies (`FS`/`SS`/`FF`/`SF`), lag units, critical path | `references/dependencies.md` |
-| Column config, `ProgressRing` / `Wbs`, `renderers`, custom toolbar items, parsing | `references/columns-and-toolbar.md` |
+| Column config, `ProgressRing` / `Wbs`, built-in column keys, `renderers`, custom toolbar items, parsing | `references/columns-and-toolbar.md` |
+| Task-list grid: sorting, filtering, grouping, auto-size / resize / reorder columns | `references/grid.md` |
+| UI state persistence, draw-to-create, scroll-to-task, export (SVG/PNG/PDF) | `references/interaction.md` |
 | Events, selection, inline edit, drag/resize, progress drag | `references/events.md` |
 | CRUD API, undo/redo, calendar, sub-day scheduling, interaction toggles | `references/editing.md` |
 | React, Vue 3, Angular wrappers | `references/framework-wrappers.md` |

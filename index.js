@@ -23,6 +23,8 @@ export const referenceFiles = [
   'editing.md',
   'events.md',
   'framework-wrappers.md',
+  'grid.md',
+  'interaction.md',
 ];
 
 /** Resolve a reference file by its filename. Throws if not in the known list. */

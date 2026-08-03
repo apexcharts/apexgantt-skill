@@ -72,9 +72,12 @@ const deps = await readFile(referencePath('dependencies.md'), 'utf8');
 ├── SKILL.md                       # Main entry point — read this first
 ├── .cursorrules                   # Self-contained version for Cursor / Windsurf
 ├── references/
-│   ├── data-format.md             # tasks, hierarchy, milestones, baseline
+│   ├── data-format.md             # tasks, hierarchy, milestones, baseline, split tasks
 │   ├── dependencies.md            # FS/SS/FF/SF, lag/lead, critical path
-│   ├── columns-and-toolbar.md     # columnConfig, toolbarItems, parsing
+│   ├── columns-and-toolbar.md     # columnConfig, built-in column keys, toolbarItems, parsing
+│   ├── grid.md                    # sorting, filtering, grouping, column sizing
+│   ├── interaction.md             # UI state, draw-to-create, scroll-to-task, export
+│   ├── editing.md                 # CRUD, undo/redo, calendar, sub-day scheduling
 │   ├── events.md                  # GanttEventMap, selection, drag, resize
 │   └── framework-wrappers.md      # React, Vue, Angular
 └── install/

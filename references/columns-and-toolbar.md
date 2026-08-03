@@ -30,11 +30,17 @@ new ApexGantt(el, {
 
 | Property | Type | Default | Description |
 |---|---|---|---|
-| `key` | `ColumnKey` | — | Required. Which built-in column. |
+| `key` | `ColumnKey \| string` | — | Required. A built-in `ColumnKey`, or any other string for a custom column (needs `render`). |
 | `title` | `string` | from defaults | Header label. |
-| `minWidth` | `string` | `'30px'` | Minimum CSS width (used in `minmax()`). |
-| `flexGrow` | `number` | `1` | CSS Grid `fr` proportion. |
+| `minWidth` | `string` | `'30px'` | Minimum CSS width (used in `minmax()`); also the preferred width floor when auto-sizing. |
+| `maxWidth` | `string` | `'320px'` | Upper bound for auto-sized width, so one long value can't dominate the panel. Ignored when `autoSizeColumns` is off. |
+| `flexGrow` | `number` | `1` | CSS Grid `fr` proportion (distributes any extra width). |
 | `visible` | `boolean` | `true` | `false` keeps the column in config but hides it. |
+| `resizable` | `boolean` | `true` | Whether this column can be resized by its header handle (needs the `resizableColumns` option). `false` locks it. |
+| `render` | `ColumnRenderer` | — | Custom cell renderer `(ctx) => string`. Required for custom columns; ignored for built-ins. |
+| `accessor` | `(task) => unknown` | native | Extract the cell's underlying value for sorting / filtering / SVG export. What makes a custom column sortable. |
+| `sortable` | `boolean` | see note | Whether the column participates in sorting. Defaults `true` for built-in value columns, `false` for `Wbs`, and `true` for custom columns only when `accessor` or `comparator` is set. |
+| `comparator` | `(a, b) => number` | — | Custom sort comparator (takes precedence over `accessor`). Returns negative / zero / positive for ascending order; the active direction is applied on top. |
 
 ### Hide vs. omit
 
@@ -56,7 +62,25 @@ columnConfig: [
 
 ### Built-in column keys
 
-`ColumnKey` values: `Name`, `StartTime`, `EndTime`, `Duration`, `Progress`, plus (3.12.0) `ProgressRing` (a circular progress gauge) and `Wbs` (auto-numbered work-breakdown outline, e.g. `1.2.1`). The five listed at the top are the default-rendered set; `ProgressRing`/`Wbs` are opt-in via `columnConfig`.
+`ColumnKey` has **13** members (all opt-in via `columnConfig` except the default set):
+
+| Key | Renders |
+|---|---|
+| `Name` | Task name. |
+| `StartTime` | Start date. |
+| `EndTime` | End date (hidden by default). |
+| `Duration` | Span in days. |
+| `Progress` | Percent complete. |
+| `ProgressRing` | Circular progress gauge (3.12.0). |
+| `Wbs` | Auto-numbered work-breakdown outline, e.g. `1.2.1` (3.12.0). Not sortable. |
+| `Predecessors` | Upstream dependencies, derived from the dependency graph (3.13.0). |
+| `Successors` | Downstream dependencies, derived from the dependency graph (3.13.0). |
+| `Assignees` | Assigned people/teams, from `TaskInput.assignees` (3.13.0). |
+| `BaselineStart` | Baseline start date (3.13.0). |
+| `BaselineEnd` | Baseline end date (3.13.0). |
+| `BaselineVariance` | Signed slip between actual and baseline (3.13.0). |
+
+The five columns listed at the top of this file (`Name`, `StartTime`, `EndTime`, `Duration`, `Progress`) are the default-rendered set; the rest are opt-in via `columnConfig`. `Predecessors` / `Successors` refresh as dependencies or WBS change. Every built-in column except `Wbs` is sortable and filterable, and all are groupable (see `references/grid.md`).
 
 ### Custom columns & built-in renderers (3.12.0)
 

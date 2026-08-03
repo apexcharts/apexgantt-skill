@@ -123,4 +123,4 @@ const gantt = new ApexGantt(document.getElementById('chart'), {
 gantt.render();
 ```
 
-> Note: a task takes **one** `dependency` — either a task-ID string (Finish-to-Start, 0 lag) or a `TaskDependency` object `{ taskId, type, lag }`. Arrays are **not** supported in 3.11.x (the value is read as a single dependency); give each task a single predecessor.
+> Note: a task takes **one** `dependency` — either a task-ID string (Finish-to-Start, 0 lag) or a `TaskDependency` object `{ taskId, type, lag }`. The field type is `string | TaskDependency`, so arrays are **not** supported (an array value is read as a single dependency); give each task a single predecessor.

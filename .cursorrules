@@ -188,6 +188,16 @@ container.addEventListener(GanttEvents.TASK_UPDATE_SUCCESS, (e) => {
 - **Columns**: `ColumnKey.ProgressRing`/`Wbs`; `renderers.avatars`/`renderers.progressRing` + `escapeHtml`; `TaskInput.assignees`/`showSummaryBar`.
 - Full detail: `references/editing.md`.
 
+## New in 3.13.0–3.17.1
+
+- **Task-list grid** (view-only; never mutates the tree): sorting (`sortBy`, `sort()`/`clearSort()`/`toggleSort(key,{append})`/`getSort()`, `sortChange`; default start-time asc, `sortBy: []` = natural order), filtering (`filterBy`, `filterRules`, `enableQuickFilter`/`quickFilter`, `enableFilterBuilder`; `filter()`/`setFilterRules()`/`clearFilter()`/`isFiltered()`/`getFilterRules()`, `filterChange`; operators `'lt'`/`'gt'`/`'contains'`… not `'lessThan'`), grouping (`groupBy` + `groupBy()`/`clearGrouping()`/`getGroupBy()`/`isGrouping()`, `groupChange`). Full detail: `references/grid.md`.
+- **Column grid**: `autoSizeColumns` (**default `true`**), `resizableColumns`, `reorderableColumns`; `setColumnWidth`/`resetColumnWidths`/`getColumnWidths`, `setColumnOrder`/`getColumnOrder`; `columnResize`/`columnReorder` events. `ColumnListItem` adds `maxWidth` (default `'320px'`), `resizable`, `accessor`, `sortable`, `comparator`.
+- **13 built-in `ColumnKey`s**: adds `Predecessors`, `Successors`, `Assignees`, `BaselineStart`, `BaselineEnd`, `BaselineVariance`.
+- **Split tasks**: `TaskInput.segments: { start, end }[]` (keys are `start`/`end`); `splitTask(id, at, {resumeAt?})`, `isSplit(id)`. See `references/data-format.md`.
+- **UI state**: `getState()`/`setState(state,{silent?})`, `persistState: true | { key }`, `GanttUiState`. **Draw-to-create**: `enableDrawTask`. **Scroll**: `scrollToTask(id)`, `enableScrollButtons` (**default `false`** since 3.15.0), `scrollToTaskOnRowClick` (new 3.15.0). **Export**: `exportChart('svg'|'png'|'pdf')`, `exportFormat`. See `references/interaction.md`.
+- **`rowHeight` default is `40`** (not 28).
+- **License signatures (3.17.0+)**: keys issued since 2026-07-27 are ECDSA-verified; tampered keys watermark; unsigned keys valid until 2027-07-31.
+
 ---
 
 ## Framework Wrappers
