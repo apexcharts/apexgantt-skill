@@ -198,6 +198,10 @@ container.addEventListener(GanttEvents.TASK_UPDATE_SUCCESS, (e) => {
 - **`rowHeight` default is `40`** (not 28).
 - **License signatures (3.17.0+)**: keys issued since 2026-07-27 are ECDSA-verified; tampered keys watermark; unsigned keys valid until 2027-07-31.
 
+## New in 3.18.0
+
+- **Family theme tokens**: the Gantt reads the shared CSS tokens `--apx-accent`, `--apx-fore`, `--apx-grid`, `--apx-surface`, `--apx-series-1` … `--apx-series-N` directly from the cascade (declare them on `:root`, optionally under `prefers-color-scheme`). Precedence: product CSS variable > explicit option > `--apx-*` token > built-in default. Gantt has no theme-name option, so the `registerTheme` named-theme registry does not apply to it; theme it via the CSS tokens.
+
 ---
 
 ## Framework Wrappers

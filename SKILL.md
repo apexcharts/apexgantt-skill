@@ -7,13 +7,14 @@ description: >
   path, or baseline-vs-actual visualization with `apexgantt`. Covers task data
   format, dependency types (`FS` / `SS` / `FF` / `SF`), date parsing, view
   modes, the `update()` / `updateTask()` lifecycle, custom toolbar items,
-  selection, and framework integration (React / Vue / Angular). In React /
+  selection, theming via the family `--apx-*` CSS tokens, and framework
+  integration (React / Vue / Angular). In React /
   Vue / Angular projects, prefer the framework wrapper packages
   (`react-apexgantt`, `vue-apexgantt`, `ngx-apexgantt`) over the core API.
 metadata:
   author: ApexCharts
-  version: "1.4.0"
-  library_version: "3.17.1"
+  version: "1.5.0"
+  library_version: "3.18.0"
   category: data-visualization
   tags: [gantt, timeline, project-management, scheduling, charts, svg, apexgantt]
   docs: https://apexcharts.com/docs/apexgantt/
@@ -130,7 +131,7 @@ const gantt = new ApexGantt(el, {
 | Option | Type | Default | Notes |
 |---|---|---|---|
 | `series` | `TaskInput[]` | **required** | Task data. |
-| `theme` | `'light' \| 'dark'` | `'light'` | Built-in palette. |
+| `theme` | `'light' \| 'dark'` | `'light'` | Built-in palette. See also the family `--apx-*` tokens below. |
 | `pixelsPerDay` | `number` | auto-fit | Initial zoom as pixels-per-day (continuous; header tiers auto-chosen). Reference values: Year ≈ `0.5`, Quarter ≈ `1.6`, Month ≈ `4.9`, Week ≈ `25.7`, Day = `80`. Omit to auto-fit the data range. |
 | `inputDateFormat` | `string` | `'MM-DD-YYYY'` | dayjs format for `startTime`/`endTime`. |
 | `snapUnit` | `'day' \| 'hour' \| 'minute'` | `'day'` | Granularity that drag / resize / inline edits snap to. `'hour'`/`'minute'` enable sub-day scheduling. See §10. |
@@ -180,6 +181,45 @@ const gantt = new ApexGantt(el, {
 | `toolbarItems` | `ToolbarItem[]` | `[]` | Custom toolbar buttons / selects / separators. |
 | `tooltipTemplate` | `(task, fmt) => string` | built-in | HTML string returned per task. |
 | `annotations` | `Annotation[]` | `[]` | Vertical/horizontal markers on the timeline. |
+
+### Family theme tokens (`--apx-*`) (3.18.0+)
+
+ApexGantt reads the shared ApexCharts family CSS tokens directly from the cascade, so a page can declare its brand once on `:root` and have the Gantt follow alongside every other Apex product on the page:
+
+| Token | Role |
+|---|---|
+| `--apx-accent` | The color that means interactive or selected |
+| `--apx-fore` | Text and anything that must stay legible on the surface |
+| `--apx-grid` | Hairlines: borders, gridlines, connectors |
+| `--apx-surface` | The plane content sits on |
+| `--apx-series-1` … `--apx-series-N` | Ordered categorical palette (1-based, stops at the first gap) |
+
+```css
+:root {
+  --apx-accent: #5b21b6;
+  --apx-fore: #101828;
+  --apx-grid: #e4e7ec;
+  --apx-surface: #ffffff;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --apx-fore: #f8fafc;
+    --apx-grid: #334155;
+    --apx-surface: #0f172a;
+  }
+}
+```
+
+Resolution order (highest wins):
+
+```
+product CSS variable  >  explicit option  >  --apx-* token  >  built-in default
+```
+
+Tokens resolve below anything you configured explicitly, so adopting them cannot change a chart that was already themed. One subtlety: an option set to a value equal to its built-in default is indistinguishable from one left alone, and the token wins there. Pin a product CSS variable if a value must hold regardless.
+
+**ApexGantt has no theme-name option**, so the named-theme registry (`registerTheme` from `@apex/commons`) does not apply to it. Theme the Gantt via the CSS `--apx-*` tokens (optionally under a `prefers-color-scheme` block, as above) to keep it in sync with the rest of the family.
 
 ---
 
