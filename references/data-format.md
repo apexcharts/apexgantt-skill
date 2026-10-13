@@ -9,11 +9,11 @@ interface TaskInput {
   id: string;                              // REQUIRED, unique, stable across renders
   name: string;                            // REQUIRED, display label
   startTime: string;                       // REQUIRED, parsed by inputDateFormat
-  endTime?: string;                        // omit for milestones
-  progress?: number;                       // 0–100, default 0
-  type?: 'task' | 'milestone';             // default 'task'
+  endTime?: string;                        // required with startTime, except on milestones
+  progress?: number;                       // percentage 0 to 100, default 0, not clamped
+  type?: 'task' | 'milestone';             // default 'task'; exact lowercase
   parentId?: string;                       // for hierarchical nesting
-  dependency?: string | TaskDependency;    // see references/dependencies.md
+  dependency?: string | TaskDependency;    // ONE predecessor; see references/dependencies.md
   baseline?: { start: string; end: string };
   barBackgroundColor?: string;             // per-task override
   rowBackgroundColor?: string;             // per-row override
@@ -50,13 +50,15 @@ series: [
 ```
 
 **Rules:**
-- `parentId` must reference an existing task `id` in the same `series`. Orphans are silently flattened to top-level.
+- `parentId` must reference an existing task `id` in the same `series`. A task with an unknown `parentId` is not rendered at all, in the list or the timeline.
+- A parent row may omit `startTime` and `endTime`: it derives its span from its children. A row with no dates and no children throws.
+- Any other task needs both dates: a `startTime` without an `endTime` throws "Task must have an id, start, and end date".
 - Parent rows render an expand/collapse caret automatically.
 - `collapsed: true` on the parent hides its children initially.
 
 ## Milestones
 
-Milestones render as a diamond marker at `startTime`. Omit `endTime`:
+Milestones render as a diamond marker at `startTime` and need no `endTime`. The `type` must be the exact lowercase `'milestone'`: `'Milestone'` is treated as an ordinary task. An `endTime` on a milestone is ignored for drawing but still widens the timeline and is announced as a range, so omit it:
 
 ```js
 { id: 'launch', name: 'Launch', startTime: '06-15-2026', type: 'milestone' }
@@ -192,6 +194,8 @@ new ApexGantt(el, {
 |---|---|
 | `startTime: '2026-06-01'` with default format | Set `inputDateFormat: 'YYYY-MM-DD'` |
 | `progress: 0.75` | `progress: 75` |
-| Milestone with `endTime` | Omit `endTime`, set `type: 'milestone'` |
+| `type: 'Milestone'` (treated as a task, throws without `endTime`) | `type: 'milestone'`, lowercase |
+| Milestone with `endTime` (widens the timeline) | Omit `endTime` |
+| `dependency: ['a', 'b']` (arrays draw nothing) | One predecessor in the data; add more with `gantt.addDependency()` |
 | Re-using `id` across renders | Keep ids stable; selection / dependencies break otherwise |
 | Mutating `series` directly | Always go through `gantt.update({ series: [...] })` |

@@ -13,7 +13,7 @@ description: >
   (`react-apexgantt`, `vue-apexgantt`, `ngx-apexgantt`) over the core API.
 metadata:
   author: ApexCharts
-  version: "1.5.1"
+  version: "1.5.2"
   library_version: "3.18.1"
   category: data-visualization
   tags: [gantt, timeline, project-management, scheduling, charts, svg, apexgantt]
@@ -35,13 +35,13 @@ metadata:
 
 1. **Always call `gantt.render()`** after `new ApexGantt(el, options)`. The constructor builds internal state but does not paint the DOM.
 2. **Always call `gantt.destroy()`** before unmounting in React / Vue / Angular. The chart attaches `ResizeObserver`s and global event listeners — skipping `destroy()` causes memory leaks and "ghost" event handlers.
-3. **`series` is the task array (required).** It is **NOT** optional and **NOT** the same shape as ApexCharts series. Each task is an object with `id`, `name`, `startTime`, and (usually) `endTime` — see the data format in §2.
-4. **Date strings must match `inputDateFormat`.** The default is `'MM-DD-YYYY'`. If you pass `'2026-06-01'` (ISO), set `inputDateFormat: 'YYYY-MM-DD'` or the parse will fail silently and the bar won't render.
+3. **`series` is the task array (required).** It is **NOT** optional and **NOT** the same shape as ApexCharts series. Each task is an object with `id`, `name`, `startTime`, and `endTime` (see the data format in §2). A task with a `startTime` but no `endTime` throws "Task must have an id, start, and end date". The exceptions: a milestone needs only `startTime`; a parent row (one that other tasks name as `parentId`) may omit both dates and derives its span from its children; a task with `segments` takes its dates from them.
+4. **Date strings should match `inputDateFormat`.** The default is `'MM-DD-YYYY'`. ISO dates such as `'2026-06-01'` still draw under the default, because parsing falls back to a lenient read, but the edit dialog parses strictly (its date fields come up empty) and edited or dragged dates are written back as `MM-DD-YYYY`, mixing formats in your data. For ISO data set `inputDateFormat: 'YYYY-MM-DD'`.
 5. **`id` must be unique and stable across renders.** Selection, dependency arrows, and the diff-update path all key off `id`. Re-using `id`s breaks dependency drawing and selection state.
-6. **`parentId` references must point to an existing task `id`.** Orphan parents are dropped silently from the tree.
-7. **Milestones omit `endTime`.** A task with `type: TaskType.Milestone` (or `'milestone'`) renders as a diamond at `startTime`; do not pass `endTime` for milestones.
-8. **`progress` is 0–100, not 0–1.** Values outside the range are clamped.
-9. **Dependencies accept two shapes**: a plain task `id` string (treated as `FS` with `lag: 0`) or a `TaskDependency` object `{ taskId, type, lag }`. Mixing the two on the same task is fine.
+6. **`parentId` references must point to an existing task `id`.** A task whose `parentId` matches no task is not rendered at all: it disappears from both the task list and the timeline.
+7. **Milestones need only `startTime`.** A task with `type: TaskType.Milestone` (the exact lowercase string `'milestone'`) renders as a diamond at `startTime`. An `endTime` on a milestone is ignored for drawing but still widens the timeline and is read out as a range by screen readers, so omit it. `'Milestone'` with a capital M is not recognised and the row is treated as an ordinary task.
+8. **`progress` is a percentage (0 to 100), not a 0 to 1 fraction.** It is not clamped: `150` draws a 150% fill.
+9. **Each task takes one dependency in its data**: a plain task `id` string (treated as `FS` with `lag: 0`) or a `TaskDependency` object `{ taskId, type, lag }`. An array is not accepted and draws no arrow. For a task with several predecessors, put one in the data and add the rest after `render()` with `gantt.addDependency(fromId, toId, { type, lag })`.
 10. **Use `update()` for full reconfigures**, `updateTask(id, patch)` for surgical single-task changes. `updateTask` skips a full re-layout and is much faster for streaming progress updates.
 11. **For non-standard data shapes use `parsing`, not manual `.map()`.** The `parsing` config maps your fields → `TaskInput` fields and supports dot-notation paths and `transform` functions.
 12. **`enableSelection: true` is required** for `getSelectedTasks()` / `setSelectedTasks()` / `clearSelection()` and the `selectionChange` event to fire.
@@ -58,12 +58,12 @@ metadata:
 {
   id: string;                       // REQUIRED, unique, stable
   name: string;                     // REQUIRED, display label
-  startTime: string;                // REQUIRED, parsed by inputDateFormat
-  endTime?: string;                 // omit for milestones
-  progress?: number;                // 0–100, default 0
-  type?: 'task' | 'milestone';      // default 'task'
+  startTime: string;                // REQUIRED, parsed by inputDateFormat (a parent row may omit both dates)
+  endTime?: string;                 // required with startTime, except on milestones
+  progress?: number;                // percentage 0 to 100, default 0, not clamped
+  type?: 'task' | 'milestone';      // default 'task'; exact lowercase
   parentId?: string;                // hierarchical nesting
-  dependency?: string | TaskDependency;
+  dependency?: string | TaskDependency;  // ONE predecessor; add more with gantt.addDependency()
   baseline?: { start: string; end: string };
   barBackgroundColor?: string;      // per-task override
   rowBackgroundColor?: string;      // per-row override
@@ -349,10 +349,11 @@ container.addEventListener(GanttEvents.TASK_DRAGGED, (e) => {
 
 ### Pitfall 1: Date format mismatch
 
-❌ **WRONG** — passing ISO dates without setting the format:
+❌ **WRONG**: passing ISO dates without setting the format:
 ```js
 new ApexGantt(el, { series: [{ id: 't1', name: 'X', startTime: '2026-06-01', endTime: '2026-06-15' }] });
-// Bars won't render — default inputDateFormat is 'MM-DD-YYYY'.
+// The bars draw (parsing falls back), but the edit dialog shows empty date
+// fields and edited or dragged dates are written back as MM-DD-YYYY.
 ```
 
 ✅ **CORRECT**:
@@ -399,14 +400,19 @@ gantt.update({ series: tasks.map(t => t.id === 't3' ? { ...t, progress: 75 } : t
 gantt.updateTask('t3', { progress: 75 });
 ```
 
-### Pitfall 5: Milestone with `endTime`
+### Pitfall 5: A milestone with the wrong `type` casing, or an `endTime`
 
-❌ **WRONG** — milestone with a duration is rendered as a regular bar:
+❌ **WRONG**: `'Milestone'` is not recognised, so this row is an ordinary task, and without an `endTime` it throws:
+```js
+{ id: 'm1', name: 'Launch', type: 'Milestone', startTime: '02-20-2026' }
+```
+
+❌ **ALSO WRONG**: a milestone still draws as a diamond at `startTime`, but the later `endTime` widens the timeline and is announced as a range:
 ```js
 { id: 'm1', name: 'Launch', type: 'milestone', startTime: '02-20-2026', endTime: '02-25-2026' }
 ```
 
-✅ **CORRECT** — omit `endTime`:
+✅ **CORRECT**: lowercase type, `startTime` only:
 ```js
 { id: 'm1', name: 'Launch', type: 'milestone', startTime: '02-20-2026' }
 ```
@@ -438,12 +444,12 @@ new ApexGantt(el, { series: tasks, enableSelection: true });
 
 ### Pitfall 8: `progress` as a 0–1 fraction
 
-❌ `{ ..., progress: 0.75 }` renders a 1% bar.
+❌ `{ ..., progress: 0.75 }` renders a 0.75% fill, which looks empty.
 ✅ `{ ..., progress: 75 }`.
 
 ### Pitfall 9: Orphan `parentId`
 
-❌ `parentId: 'phase-x'` when no task with id `'phase-x'` exists — the row is silently flattened to top level.
+❌ `parentId: 'phase-x'` when no task with id `'phase-x'` exists: the row is not rendered at all, in the list or the timeline.
 ✅ Make sure every `parentId` refers to a task in the same `series` array.
 
 ### Pitfall 10: Forgetting to set the license key
