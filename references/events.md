@@ -30,7 +30,9 @@ container.addEventListener(GanttEvents.TASK_UPDATE_SUCCESS, (e) => {
 | `TASK_DRAGGED` | `taskDragged` | `{ taskId, oldStartTime, oldEndTime, newStartTime, newEndTime, daysMoved, affectedChildTasks, timestamp }` | Bar dropped at a new horizontal position. |
 | `TASK_RESIZED` | `taskResized` | `{ taskId, resizeHandle: 'left'\|'right', oldStartTime, oldEndTime, newStartTime, newEndTime, durationChange, timestamp }` | Bar resized via a handle. |
 | `SELECTION_CHANGE` | `selectionChange` | `{ selectedTasks, selectedIds, timestamp }` | Selection set changed. |
-| `DEPENDENCY_ARROW_UPDATE` | `dependencyArrowUpdate` | `{ fromId, toId, type, lag, chartInstanceId, arrowLinkInstanceId }` | Dependency arrow created / updated / removed. |
+| `DEPENDENCY_ADDED` | `dependencyAdded` | `{ fromId, toId, type, lag, timestamp }` | Edge created: `addDependency()`, or a link drawn with `dependencies.editable: true`. |
+| `DEPENDENCY_REMOVED` | `dependencyRemoved` | `{ fromId, toId, type, lag, timestamp }` (pre-removal values) | Edge removed: `removeDependency()`, the arrow's ✕ or Delete key, or `deleteTask()` taking the edge with it. Not fired by undo/redo. |
+| `DEPENDENCY_ARROW_UPDATE` | `dependencyArrowUpdate` | `{ fromId, toId, type, lag, chartInstanceId, arrowLinkInstanceId }` | Internal redraw signal for each edge of a task that moved. Not a create/remove event; does not bubble. Do not persist from it. |
 
 All `*Time` strings are formatted using `options.inputDateFormat`.
 

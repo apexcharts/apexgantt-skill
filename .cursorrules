@@ -120,7 +120,9 @@ container.addEventListener(GanttEvents.TASK_UPDATE_SUCCESS, (e) => {
 | `TASK_DRAGGED` | `taskDragged` |
 | `TASK_RESIZED` | `taskResized` |
 | `SELECTION_CHANGE` | `selectionChange` |
-| `DEPENDENCY_ARROW_UPDATE` | `dependencyArrowUpdate` |
+| `DEPENDENCY_ADDED` | `dependencyAdded` |
+| `DEPENDENCY_REMOVED` | `dependencyRemoved` |
+| `DEPENDENCY_ARROW_UPDATE` | `dependencyArrowUpdate` (internal redraw signal; never persist from it) |
 
 ---
 

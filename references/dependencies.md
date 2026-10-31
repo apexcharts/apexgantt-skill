@@ -76,18 +76,37 @@ ApexGantt computes the path automatically using each task's start/end and depend
 
 ## Editing dependencies interactively
 
-Users can drag arrows between bars in the timeline (when supported by the build). Each interactive change fires:
+Off by default. Set `dependencies: { editable: true }` to let users draw and delete arrows:
+
+- **Draw**: hovering a bar shows a circle at its start and finish edges. Drag from one onto another bar's start or finish edge. The pair of edges sets the type: finish to start is `FS`, start to start `SS`, finish to finish `FF`, start to finish `SF`. A drawn link has `lag: 0`.
+- **Delete**: click an arrow to select it, then click the ✕ at its head (or press Delete on a focused arrow).
+
+`editable: true` also widens each arrow's hit area to at least 12 px (`hitWidth`) so the thin stroke can be clicked. Links between a summary task and its own descendants are refused unless `allowSummaryDescendantLinks: true`.
+
+A drawn link goes through `addDependency()` and a deleted one through `removeDependency()`, so both are undoable, pass the `beforeDependencyChange` veto hook, and fire the same events as the API calls. Persist from those:
 
 ```js
 import { GanttEvents } from 'apexgantt';
 
-container.addEventListener(GanttEvents.DEPENDENCY_ARROW_UPDATE, (e) => {
-  const { fromId, toId, type, lag } = e.detail;
-  // persist to backend
+const gantt = new ApexGantt(container, { series: tasks, dependencies: { editable: true } });
+gantt.render();
+
+container.addEventListener(GanttEvents.DEPENDENCY_ADDED, (e) => {
+  const { fromId, toId, type, lag } = e.detail;   // drawn links: type from the edges, lag 0
+  // create on the backend
+});
+
+container.addEventListener(GanttEvents.DEPENDENCY_REMOVED, (e) => {
+  const { fromId, toId } = e.detail;
+  // delete on the backend
 });
 ```
 
-`type` is one of `'FF' | 'FS' | 'SF' | 'SS'`. `lag` is in days.
+`type` is one of `'FF' | 'FS' | 'SF' | 'SS'`. `lag` is in days. `deleteTask()` also fires `DEPENDENCY_REMOVED` once for each edge it takes with the task.
+
+Undo and redo do **not** fire these two events. They fire only `historyChange` (`kind: 'undo'` or `'redo'`), and its detail does not name the edge, so a backend synced from the two events alone drifts when a user undoes a link. If the backend must mirror every edge, turn history off with `history: { enabled: false }`.
+
+Do not persist on `DEPENDENCY_ARROW_UPDATE`. It is an internal redraw signal, fired for every edge of a task that moves, so its `detail` names edges that were neither created nor removed, and it does not bubble.
 
 ## Common pitfalls
 

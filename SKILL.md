@@ -13,7 +13,7 @@ description: >
   (`react-apexgantt`, `vue-apexgantt`, `ngx-apexgantt`) over the core API.
 metadata:
   author: ApexCharts
-  version: "1.6.0"
+  version: "1.6.1"
   library_version: "3.19.0"
   category: data-visualization
   tags: [gantt, timeline, project-management, scheduling, charts, svg, apexgantt]
@@ -168,6 +168,7 @@ const gantt = new ApexGantt(el, {
 | `persistState` | `boolean \| { key }` | `false` | Persist/restore UI view state via `localStorage` (`true` = default key `'apexgantt-state'`). See `references/interaction.md`. |
 | `exportFormat` | `'svg' \| 'png' \| 'pdf'` | `'svg'` | Format for the toolbar export button. Any format is also available via `gantt.exportChart(format)`. |
 | `enableCriticalPath` | `boolean` | `false` | Compute & highlight CPM through dependencies. |
+| `dependencies` | `DependencyOptions` | unset | Arrow options: `editable` (`false`; `true` lets users draw links between bar edges and delete them with ✕ or Delete), `allowSummaryDescendantLinks`, `hitWidth`, `cornerRadius`, `classBuilder`, `tooltipTemplate`. See `references/dependencies.md`. |
 | `enableRollups` | `boolean` | `false` | Thin rollup markers under summary bars at each leaf's range (visible even when collapsed). |
 | `enableProjectBoundary` | `boolean` | `false` | Two vertical lines at the project's earliest start / latest end. |
 | `projectBoundaryColor` | `string` | `'#7C3AED'` | Stroke for the boundary lines. Falls back to `annotationBorderColor`. |
@@ -334,8 +335,8 @@ container.addEventListener(GanttEvents.TASK_DRAGGED, (e) => {
 | `GanttEvents.TASK_ADDED` | `taskAdded` | Task inserted via `addTask()` / toolbar / context menu. |
 | `GanttEvents.TASK_DELETED` | `taskDeleted` | Task removed via `deleteTask()`. One event per removed task on cascade. |
 | `GanttEvents.TASK_MOVED` | `taskMoved` | Task re-parented via `moveTask()`. |
-| `GanttEvents.DEPENDENCY_ADDED` | `dependencyAdded` | Edge created via `addDependency()`. |
-| `GanttEvents.DEPENDENCY_REMOVED` | `dependencyRemoved` | Edge removed via `removeDependency()`. |
+| `GanttEvents.DEPENDENCY_ADDED` | `dependencyAdded` | Edge created via `addDependency()` or drawn by the user (`dependencies.editable`). Not fired by undo/redo. |
+| `GanttEvents.DEPENDENCY_REMOVED` | `dependencyRemoved` | Edge removed via `removeDependency()`, the arrow's ✕ or Delete key, or `deleteTask()`. Not fired by undo/redo. |
 | `GanttEvents.SELECTION_CHANGE` | `selectionChange` | Selection set changed. |
 | `GanttEvents.DEPENDENCY_ARROW_UPDATE` | `dependencyArrowUpdate` | Internal arrow-redraw signal (task moved). Not a CRUD event. |
 | `GanttEvents.HISTORY_CHANGE` | `historyChange` | Undo/redo stack changed (`kind`: `'record'`/`'undo'`/`'redo'`/`'clear'`). |
