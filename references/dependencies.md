@@ -72,7 +72,7 @@ const gantt = new ApexGantt(el, {
 gantt.render();
 ```
 
-ApexGantt computes the path automatically using each task's start/end and dependency graph and re-runs the calculation on every render or update.
+ApexGantt computes the path automatically using each task's start/end and dependency graph and re-runs the calculation on every render or update. Since 3.18.3 it is also recomputed after every edit that can move it: `addDependency()` / `removeDependency()`, a link drawn between two bars, a date change through `updateTask()`, a drag or the edit dialog, and undo/redo of any of these. The `bar-critical` and `critical-arrow` classes move to match, so there is no need to re-render after an edit. Edits that cannot change the path (progress, name, colour) skip the recompute.
 
 ## Editing dependencies interactively
 

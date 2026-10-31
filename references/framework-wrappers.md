@@ -156,6 +156,29 @@ function onDragged(e: GanttEventMap['taskDragged']) {
 }
 ```
 
+## Web components (shadow DOM)
+
+Since 3.19.0 the core API works inside a shadow root: pass an element inside it as the container. Styles, dropdowns and keyboard focus stay inside that root, and the `--apx-*` tokens set on the host page still reach the chart. The chart adds its own nodes next to whatever the container held when it was constructed, and re-renders and `destroy()` keep those children, so a component can keep its own markup in the same element (add it before constructing the chart).
+
+```js
+import { ApexGantt } from 'apexgantt';
+
+class ProjectGantt extends HTMLElement {
+  connectedCallback() {
+    if (!this.el) {
+      this.el = document.createElement('div');
+      this.attachShadow({ mode: 'open' }).appendChild(this.el);
+    }
+    this.gantt = new ApexGantt(this.el, { series: this.tasks ?? [] });
+    this.gantt.render();
+  }
+  disconnectedCallback() {
+    this.gantt?.destroy();
+  }
+}
+customElements.define('project-gantt', ProjectGantt);
+```
+
 ## Common pitfalls in framework code
 
 | ❌ | ✅ |

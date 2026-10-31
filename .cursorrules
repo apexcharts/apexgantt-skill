@@ -69,7 +69,7 @@ gantt.render();
 ```js
 import { ApexGantt, GanttEvents } from 'apexgantt';
 
-ApexGantt.setLicense('KEY');                      // optional, once at app startup
+ApexGantt.setLicense('KEY');                      // once at app startup; runs without it, but with a trial watermark
 
 const gantt = new ApexGantt(el, {
   series: tasks,
@@ -80,7 +80,7 @@ gantt.render();                                   // REQUIRED
 gantt.update({ pixelsPerDay: 80 });               // merge + re-render (80 = day density)
 gantt.updateTask('t1', { progress: 75 });         // fast single-task patch
 gantt.zoomIn(); gantt.zoomOut();                  // raise / lower pixelsPerDay (day ↔ year)
-gantt.destroy();                                  // free observers + DOM
+gantt.destroy();                                  // remove the chart's nodes, free observers
 ```
 
 ---
@@ -90,7 +90,7 @@ gantt.destroy();                                  // free observers + DOM
 | Method | Description |
 |---|---|
 | `render()` | Paint chart. Required. |
-| `destroy()` | Tear down. |
+| `destroy()` | Tear down. Keeps what the container held before construction. |
 | `update(options)` | Merge options & re-render. |
 | `updateTask(id, patch)` | Surgical patch. Faster than `update()`. |
 | `zoomIn()` / `zoomOut()` | Raise / lower `pixelsPerDay` (continuous zoom). |
@@ -165,7 +165,7 @@ container.addEventListener(GanttEvents.TASK_UPDATE_SUCCESS, (e) => {
 ✅ Ensure every `parentId` matches an `id` in the same `series`.
 
 ### 10. License key skipped
-❌ Watermark in production.
+❌ The chart runs, but with a trial watermark. Production use needs a key.
 ✅ `ApexGantt.setLicense('KEY')` once at app startup.
 
 ### 11. Direct mutation of `series`
@@ -202,6 +202,12 @@ container.addEventListener(GanttEvents.TASK_UPDATE_SUCCESS, (e) => {
 ## New in 3.18.0
 
 - **Family theme tokens**: the Gantt reads the shared CSS tokens `--apx-accent`, `--apx-fore`, `--apx-grid`, `--apx-surface`, `--apx-series-1` … `--apx-series-N` directly from the cascade (declare them on `:root`, optionally under `prefers-color-scheme`). Precedence: product CSS variable > explicit option > `--apx-*` token > built-in default. Gantt has no theme-name option, so the `registerTheme` named-theme registry does not apply to it; theme it via the CSS tokens.
+
+## New in 3.18.3 and 3.19.0
+
+- **Critical path stays current (3.18.3)**: with `enableCriticalPath: true` the path is recomputed after `addDependency()`/`removeDependency()`, a drawn link, a date change (`updateTask()`, drag, edit dialog) and undo/redo. No re-render needed.
+- **Shadow DOM (3.19.0)**: works inside a shadow root (pass an element inside it as the container); styles, dropdowns and keyboard focus stay inside it, and `--apx-*` tokens from the page still reach it.
+- **Container content is kept (3.19.0)**: `render()`, re-renders and `destroy()` no longer empty the container: children it held when the chart was constructed stay (anything appended later is treated as the chart's and removed). A new `ApexGantt` on a container that already holds a live chart destroys the old one first.
 
 ---
 

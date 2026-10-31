@@ -13,8 +13,8 @@ description: >
   (`react-apexgantt`, `vue-apexgantt`, `ngx-apexgantt`) over the core API.
 metadata:
   author: ApexCharts
-  version: "1.5.2"
-  library_version: "3.18.1"
+  version: "1.6.0"
+  library_version: "3.19.0"
   category: data-visualization
   tags: [gantt, timeline, project-management, scheduling, charts, svg, apexgantt]
   docs: https://apexcharts.com/docs/apexgantt/
@@ -241,10 +241,12 @@ gantt.updateTask('t1', { progress: 75 });    // surgical single-task patch
 gantt.zoomIn();                              // raise pixelsPerDay (toward day-level detail)
 gantt.zoomOut();                             // lower pixelsPerDay (toward year overview)
 
-gantt.destroy();                             // free observers + DOM
+gantt.destroy();                             // remove the chart's nodes, free observers
 ```
 
 `update()` preserves scroll position, collapsed/expanded state, and current zoom (`pixelsPerDay`) unless you explicitly override them.
+
+`render()`, re-renders and `destroy()` no longer empty the container (3.19.0+): the children it held when the chart was constructed stay, and everything else is removed as the chart's own. Put your own markup in the container before constructing, not after. Constructing a new `ApexGantt` on a container that already holds a live chart destroys the old one first.
 
 ---
 
@@ -289,14 +291,14 @@ gantt.destroy();                             // free observers + DOM
 | `scrollToTask(id)` | Scroll a task's bar into view (nearest-edge). Returns `false` if unknown / already visible. |
 | `exportChart(format?)` | Export as `'svg'`/`'png'`/`'pdf'` and trigger a download. Defaults to `exportFormat`. Returns a `Promise`. |
 | `renderToolbar(container)` | Render the built-in toolbar into a custom DOM slot. |
-| `destroy()` | Tear down. Required before unmounting in SPA frameworks. |
+| `destroy()` | Tear down. Required before unmounting in SPA frameworks. Removes the chart's nodes; children the container held before construction stay. |
 | `isDestroyed()` | Guard before calling other methods. |
 
 ### Static method
 
 | Method | Description |
 |---|---|
-| `ApexGantt.setLicense(key)` | Set the global license key once at app startup. Without it the chart renders with a watermark. |
+| `ApexGantt.setLicense(key)` | Set the global license key once at app startup. The chart runs without one, but renders with a trial watermark; production use needs a key. |
 
 ---
 
@@ -376,7 +378,7 @@ new ApexGantt(el, {
 useEffect(() => {
   const g = new ApexGantt(ref.current, { series: tasks });
   g.render();
-}, [tasks]);  // ResizeObservers + listeners pile up on every change
+}, [tasks]);  // no cleanup: on unmount the chart's ResizeObservers and global listeners outlive the component
 ```
 
 ✅ **CORRECT**:
@@ -454,8 +456,8 @@ new ApexGantt(el, { series: tasks, enableSelection: true });
 
 ### Pitfall 10: Forgetting to set the license key
 
-❌ — chart renders a watermark.
-✅ — call once at app startup, before constructing any chart:
+❌ The chart works without a key, but renders with a trial watermark. Any production use needs a key.
+✅ Call once at app startup, before constructing any chart:
 ```js
 import { ApexGantt } from 'apexgantt';
 ApexGantt.setLicense('YOUR_LICENSE_KEY');
@@ -600,4 +602,4 @@ For deeper detail and full working examples, refer to:
 | UI state persistence, draw-to-create, scroll-to-task, export (SVG/PNG/PDF) | `references/interaction.md` |
 | Events, selection, inline edit, drag/resize, progress drag | `references/events.md` |
 | CRUD API, undo/redo, calendar, sub-day scheduling, interaction toggles | `references/editing.md` |
-| React, Vue 3, Angular wrappers | `references/framework-wrappers.md` |
+| React, Vue 3, Angular wrappers, web components (shadow DOM) | `references/framework-wrappers.md` |

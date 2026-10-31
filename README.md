@@ -80,7 +80,7 @@ const deps = await readFile(referencePath('dependencies.md'), 'utf8');
 │   ├── interaction.md             # UI state, draw-to-create, scroll-to-task, export
 │   ├── editing.md                 # CRUD, undo/redo, calendar, sub-day scheduling
 │   ├── events.md                  # GanttEventMap, selection, drag, resize
-│   └── framework-wrappers.md      # React, Vue, Angular
+│   └── framework-wrappers.md      # React, Vue, Angular, shadow DOM
 └── install/
     ├── claude-code.md
     ├── cursor.md
