@@ -1,4 +1,4 @@
-# Task-List Grid — Sorting, Filtering, Grouping, Column Sizing
+# Task-List Grid: Sorting, Filtering, Grouping, Column Sizing
 
 Everything here turns the task list into a real data grid. All of it is
 **view-only**: sorting, filtering, and grouping change which rows render and in
@@ -22,9 +22,11 @@ new ApexGantt(el, {
 });
 ```
 
-The chart defaults to **start-time ascending**; pass `sortBy: []` for natural
-(input) order. A `SortCriterion` is `{ key: ColumnKey | string; direction?: 'asc' | 'desc' }`
-(`direction` defaults to `'asc'`).
+The chart defaults to **start-time ascending**, so rows do not appear in array
+order unless you pass `sortBy: []` for natural (input) order. A `SortCriterion` is
+`{ key: ColumnKey | string; direction?: 'asc' | 'desc' }` (`direction` defaults to
+`'asc'`). From 3.20.0 empty values sort last in both directions (through 3.19
+they come first when sorting descending).
 
 Runtime API:
 
@@ -84,6 +86,12 @@ A `FilterRule` is `{ field: ColumnKey | string; operator: FilterOperator; value?
 value type (text / number / date); `isEmpty` / `notEmpty` apply to any type and
 ignore `value`.
 
+Rules on `ColumnKey.Duration` compare the count the Duration column shows
+(base units of `snapUnit`, or working days with a calendar and day snapping)
+from 3.20.0, so `{ field: ColumnKey.Duration, operator: 'equals', value: 5 }`
+matches a task showing `5 d` or `5 wd`. Through 3.19 Duration sorting and
+filtering compare `end - start` in milliseconds.
+
 ### Runtime API
 
 ```js
@@ -117,7 +125,11 @@ gantt.isGrouping();                                  // → boolean
 A `GroupCriterion` is
 `{ field: ColumnKey | string; accessor?: (task) => unknown; label?: (value) => string; direction?: 'asc' | 'desc' }`.
 Grouping composes with sort and filter and emits a `groupChange` event
-(`{ active, field, groupCount, timestamp }`). A criterion's `accessor` / `label`
+(`{ active, field, groupCount, timestamp }`). From 3.20.0 groups are ordered by
+the underlying value (numbers numerically, dates chronologically) with "(None)"
+last; through 3.19 they are ordered by label text, so `10` sorts before `9`.
+Grouping by Duration with hour or minute snapping gives groups such as `4 h` /
+`8 h` from 3.20.0 (through 3.19 sub-day tasks all land in one `0 d` group). A criterion's `accessor` / `label`
 functions are **not** serialized by `persistState` / `getState()` (only `field`
 and `direction` are), so a restored grouping falls back to the column's own
 accessor.

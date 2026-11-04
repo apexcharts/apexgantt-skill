@@ -2,13 +2,14 @@
 
 ## Column configuration
 
-The task-list panel shows configurable columns. By default these five columns render in this order:
+The task-list panel shows configurable columns. Without `columnConfig` these four columns render, in this order (header titles in brackets):
 
-1. `Name`
-2. `StartTime`
-3. `EndTime` *(hidden by default)*
-4. `Duration`
-5. `Progress`
+1. `ColumnKey.Name` (Task Name)
+2. `ColumnKey.StartTime` (Start)
+3. `ColumnKey.Duration` (Duration)
+4. `ColumnKey.Progress` (Progress)
+
+There is no End column by default: add `ColumnKey.EndTime` (End) through `columnConfig` if you want one.
 
 Override with `columnConfig`. **When you supply `columnConfig` it is authoritative — only the columns you list render**, in the order you list them.
 
@@ -30,8 +31,8 @@ new ApexGantt(el, {
 
 | Property | Type | Default | Description |
 |---|---|---|---|
-| `key` | `ColumnKey \| string` | — | Required. A built-in `ColumnKey`, or any other string for a custom column (needs `render`). |
-| `title` | `string` | from defaults | Header label. |
+| `key` | `ColumnKey \| string` | none | Required. A built-in `ColumnKey`, or any other string for a custom column (needs `render`). |
+| `title` | `string` | see note | Header label. If omitted on a built-in `ColumnKey`, from 3.20.0 the column gets its standard title (Task Name, Start, End, Duration, Progress, Predecessors, Successors, Assignees, Baseline Start, Baseline End, Variance, WBS); through 3.19 only the four default keys fill it in, so pass it for any other built-in on older versions. A custom key always needs its own `title`. |
 | `minWidth` | `string` | `'30px'` | Minimum CSS width (used in `minmax()`); also the preferred width floor when auto-sizing. |
 | `maxWidth` | `string` | `'320px'` | Upper bound for auto-sized width, so one long value can't dominate the panel. Ignored when `autoSizeColumns` is off. |
 | `flexGrow` | `number` | `1` | CSS Grid `fr` proportion (distributes any extra width). |
@@ -68,8 +69,8 @@ columnConfig: [
 |---|---|
 | `Name` | Task name. |
 | `StartTime` | Start date. |
-| `EndTime` | End date (hidden by default). |
-| `Duration` | Span in days. |
+| `EndTime` | End date (not in the default set; add it via `columnConfig`). |
+| `Duration` | Span in days (working days, `wd`, while a calendar is active with day snapping). With a sub-day `snapUnit`, from 3.20.0 it shows base units (a 45-minute task reads `45 m` with `snapValue: 15`), and the inline Duration editor works in the same units by the same rule for every date format; through 3.19 the number is divided by `snapValue`. From 3.20.0 sorting, filtering and grouping on Duration use the count the column shows (through 3.19 sort and filter compare milliseconds). |
 | `Progress` | Percent complete. |
 | `ProgressRing` | Circular progress gauge (3.12.0). |
 | `Wbs` | Auto-numbered work-breakdown outline, e.g. `1.2.1` (3.12.0). Not sortable. |
@@ -78,9 +79,9 @@ columnConfig: [
 | `Assignees` | Assigned people/teams, from `TaskInput.assignees` (3.13.0). |
 | `BaselineStart` | Baseline start date (3.13.0). |
 | `BaselineEnd` | Baseline end date (3.13.0). |
-| `BaselineVariance` | Signed slip between actual and baseline (3.13.0). |
+| `BaselineVariance` | Signed slip between actual and baseline (3.13.0). Calendar days (suffix `d`); from 3.20.0 working days (suffix `wd`) while a calendar is active. |
 
-The five columns listed at the top of this file (`Name`, `StartTime`, `EndTime`, `Duration`, `Progress`) are the default-rendered set; the rest are opt-in via `columnConfig`. `Predecessors` / `Successors` refresh as dependencies or WBS change. Every built-in column except `Wbs` is sortable and filterable, and all are groupable (see `references/grid.md`).
+The four columns listed at the top of this file (`Name`, `StartTime`, `Duration`, `Progress`) are the default-rendered set; the rest, `EndTime` included, are opt-in via `columnConfig`. `Predecessors` / `Successors` refresh as dependencies or WBS change. Every built-in column except `Wbs` is sortable and filterable, and all are groupable (see `references/grid.md`).
 
 ### Custom columns & built-in renderers (3.12.0)
 
@@ -135,6 +136,7 @@ The built-in toolbar carries zoom in/out and an export button. Add custom contro
   type: 'select',
   label: 'Filter',
   placeholder: 'All',
+  value: 'open',                       // 3.20.0+: initial value
   options: [
     { value: 'open',   text: 'Open' },
     { value: 'closed', text: 'Closed' },
@@ -142,6 +144,8 @@ The built-in toolbar carries zoom in/out and an export button. Add custom contro
   onChange: (value, { selectedTasks }) => filterByStatus(value),
 }
 ```
+
+From 3.20.0 a select keeps the value the user chose across re-renders. Through 3.19 it is rebuilt showing its placeholder on every render, and there is no `value` option.
 
 ### Separator
 
@@ -208,7 +212,7 @@ new ApexGantt(el, {
 
 Each value is a dot-notation string path or `{ key, transform }`. `transform` runs after the path is resolved.
 
-**Supported keys:** `id`, `name`, `startTime`, `endTime`, `progress`, `type`, `parentId`, `dependency`, `barBackgroundColor`, `rowBackgroundColor`, `collapsed`.
+**Supported keys:** `id`, `name`, `startTime`, `endTime`, `progress`, `type`, `parentId`, `dependency`, `barBackgroundColor`, `rowBackgroundColor`, `collapsed`. From 3.20.0 also `showSummaryBar`, `baseline`, `segments`, `assignees` and `barTextColor`. `id`, `name` and `startTime` must be mapped. Through 3.19 every row with an empty start is skipped. From 3.20.0 such a row is kept only when it is the parent of a dated row (directly or further down); any other undated row is skipped with the warning `DataParser: Skipping item at index N: it has no start date and no dated child rows`.
 
 ## Mounting the toolbar elsewhere
 

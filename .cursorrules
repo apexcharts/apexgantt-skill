@@ -17,17 +17,20 @@ Wrappers handle `destroy()` automatically on unmount, accept reactive props, and
 
 1. **Always call `gantt.render()`** after `new ApexGantt(el, options)`. The constructor builds state but does not paint the DOM.
 2. **Always call `gantt.destroy()`** before unmounting in React / Vue / Angular — it frees `ResizeObserver`s and global listeners.
-3. **`series` is the task array** (required). Each task has `id` (unique, stable), `name`, `startTime`, and `endTime`. A `startTime` without an `endTime` throws, except on a milestone; a parent row may omit both dates.
-4. **Date strings should match `inputDateFormat`** (default `'MM-DD-YYYY'`). ISO dates still draw, but the edit dialog shows empty dates and edits are written back as MM-DD-YYYY: for ISO data set `inputDateFormat: 'YYYY-MM-DD'`.
-5. **`progress` is 0–100**, not 0–1.
-6. **Milestones use `type: 'milestone'`** (exact lowercase) and need only `startTime`; omit `endTime`.
-7. **`parentId` must reference an existing task `id`**. A task with an unknown `parentId` is not rendered.
-8. **Use `updateTask(id, patch)` for single-task changes**, `update(options)` for full reconfigures.
-9. **Events fire on the host container element**, not on the gantt instance. Use `container.addEventListener(GanttEvents.…, …)`.
+3. **`series` is the task array** (required). Each task has `id` (unique, stable), `name`, `startTime`, and `endTime`. Through 3.19 a `startTime` without an `endTime` throws unless `type` is `'milestone'`; from 3.20.0 a task with no `endTime` and no `type` is drawn as a milestone (a summary bar when it has children). A parent row may omit both dates (3.20.0+: or give just one). A task with no `startTime` and no children throws.
+4. **Date strings should match `inputDateFormat`** (default `'MM-DD-YYYY'`). ISO dates still draw (parsing falls back to a lenient read), but edits are written back as MM-DD-YYYY, and through 3.19 the edit dialog shows empty dates: for ISO data set `inputDateFormat: 'YYYY-MM-DD'`.
+5. **`progress` is 0 to 100**, not 0 to 1.
+6. **Milestones use `type: 'milestone'`** (exact lowercase) and need only `startTime`; omit `endTime`. Set the type explicitly even on 3.20.0+, where it would be inferred.
+7. **`parentId` must reference an existing task `id`**. Through 3.19 a task with an unknown `parentId` is not rendered; from 3.20.0 it is attached to the root with a warning, and so is one whose `parentId` makes a cycle (3.19 overflows the stack). Ids are matched by value.
+8. **Use `updateTask(id, patch)` for single-task changes**, `update(options)` for full reconfigures. Through 3.19 `update()` rebuilds from the last `series` and drops edits; from 3.20.0 edits survive unless you pass `series` or `parsing`.
+9. **Events fire on the host container element**, not on the gantt instance. Use `container.addEventListener(GanttEvents.X, handler)`.
 10. **`enableSelection: true` is required** for selection APIs and the `selectionChange` event.
-11. **Set the license key once** at app startup with `ApexGantt.setLicense('KEY')` to remove the watermark.
+11. **License**: ApexGantt is included in the Premium plan and above; there is no free tier. Without a key charts show a trial watermark. Set your license key once at application start with `ApexGantt.setLicense('KEY')` (from 3.20.0 only a Premium or higher key removes the Gantt watermark).
 12. **Use `parsing` config** instead of manual `.map()` to adapt non-standard data shapes.
-13. **One `dependency` per task in the data** (string id or `{ taskId, type, lag }`); arrays draw nothing. Add more predecessors with `gantt.addDependency(fromId, toId)` after `render()`.
+13. **One `dependency` per task in the data** (string id or `{ taskId, type, lag }`); arrays draw nothing. Add more predecessors with `gantt.addDependency(fromId, toId)` after `render()`, checked first with `canAddDependency()` (3.20.0+ throws on a self-link, a cycle or a summary-descendant link). `getTasks()` does not include added or drawn links: save `getDependencies()` (3.20.0+) with it.
+14. **Links never move tasks.** Dependencies are drawn and feed the critical path; there is no auto-scheduling. `lag` counts working days with a calendar, calendar days otherwise; `lagUnit` has no effect (deprecated in 3.20.0).
+15. **`enableTaskDrag` reschedules bars horizontally**; it does not reorder rows (rows sort by start date unless `sortBy: []`). Drawing links is `dependencies.editable`.
+16. **Veto hooks are synchronous and take one object**: `beforeTaskUpdate: ({ task, updates }) => boolean`, `beforeTaskAdd: ({ input, parentId }) => boolean`. Return `false` to cancel; a `Promise` is not a veto.
 
 ---
 
@@ -37,14 +40,15 @@ Wrappers handle `destroy()` automatically on unmount, accept reactive props, and
 {
   id: string;                       // REQUIRED, unique, stable
   name: string;                     // REQUIRED, display label
-  startTime: string;                // REQUIRED, parsed by inputDateFormat
+  startTime: string;                // REQUIRED, parsed by inputDateFormat (parent rows may omit)
   endTime?: string;                 // required with startTime, except on milestones
-  progress?: number;                // 0–100
-  type?: 'task' | 'milestone';      // default 'task'
-  parentId?: string;                // hierarchical nesting
+  progress?: number;                // 0 to 100
+  type?: 'task' | 'milestone';      // default 'task' (3.20.0+: 'milestone' when endTime is missing)
+  parentId?: string;                // hierarchical nesting; parents get a summary bar by default
   dependency?: string | { taskId: string; type?: 'FS'|'SS'|'FF'|'SF'; lag?: number };
   baseline?: { start: string; end: string };
   barBackgroundColor?: string;
+  barTextColor?: string;            // 3.20.0+
   rowBackgroundColor?: string;
   collapsed?: boolean;
 }
@@ -69,7 +73,7 @@ gantt.render();
 ```js
 import { ApexGantt, GanttEvents } from 'apexgantt';
 
-ApexGantt.setLicense('KEY');                      // once at app startup; runs without it, but with a trial watermark
+ApexGantt.setLicense('KEY');                      // once at application start; without it, a trial watermark
 
 const gantt = new ApexGantt(el, {
   series: tasks,
@@ -79,7 +83,7 @@ const gantt = new ApexGantt(el, {
 gantt.render();                                   // REQUIRED
 gantt.update({ pixelsPerDay: 80 });               // merge + re-render (80 = day density)
 gantt.updateTask('t1', { progress: 75 });         // fast single-task patch
-gantt.zoomIn(); gantt.zoomOut();                  // raise / lower pixelsPerDay (day ↔ year)
+gantt.zoomIn(); gantt.zoomOut();                  // pixelsPerDay x or / 1.4 (continuous; no view modes)
 gantt.destroy();                                  // remove the chart's nodes, free observers
 ```
 
@@ -91,15 +95,22 @@ gantt.destroy();                                  // remove the chart's nodes, f
 |---|---|
 | `render()` | Paint chart. Required. |
 | `destroy()` | Tear down. Keeps what the container held before construction. |
-| `update(options)` | Merge options & re-render. |
-| `updateTask(id, patch)` | Surgical patch. Faster than `update()`. |
-| `zoomIn()` / `zoomOut()` | Raise / lower `pixelsPerDay` (continuous zoom). |
+| `update(options)` | Merge options & re-render. 3.20.0+: keeps task edits unless `series`/`parsing` is passed. |
+| `updateTask(id, patch, { silent? })` | Surgical patch. Faster than `update()`. 3.20.0+: fires `taskUpdate`/`taskUpdateSuccess` (`source: 'api'`) unless `silent`. |
+| `getTask(id)` / `getTasks()` | 3.20.0+. Copies with current values, nested fields included (`null` for an unknown id). Not a complete save: no added or drawn links. |
+| `getDependencies()` | 3.20.0+. Every link now as `DependencyLink` `{ fromId, toId, type, lag }` (loaded, added, drawn, minus removed; reflects undo). |
+| `addDependency(from, to, opts)` / `canAddDependency(from, to)` | 3.20.0+ `addDependency` throws for every reason `canAddDependency` reports except a hook veto (returns `false`). |
+| `expandTask(id)` / `collapseTask(id)` | 3.20.0+. View state only, not undoable; `false` for unknown id or no children. |
+| `scrollToTask(id, { expand? })` | Scroll a bar into view. 3.20.0+: opens collapsed ancestors unless `expand: false`. |
+| `addTask` / `deleteTask` / `moveTask` | CRUD (undoable). `deleteTask(id, { cascade })`; there is no `removeTask`. |
+| `zoomIn()` / `zoomOut()` | Raise / lower `pixelsPerDay` by 1.4x (continuous zoom). |
 | `getSelectedTasks()` | `Task[]`. Needs `enableSelection`. |
 | `setSelectedTasks(ids)` | Replace selection. |
 | `clearSelection()` | Reset selection. |
+| `exportChart('svg' \| 'png' \| 'pdf')` | Download; PNG and PDF are images. |
 | `renderToolbar(container)` | Custom toolbar slot. |
 | `isDestroyed()` | Guard. |
-| `ApexGantt.setLicense(key)` | Static; call once. |
+| `ApexGantt.setLicense(key)` | Static; call once at application start. |
 
 ---
 
@@ -107,22 +118,25 @@ gantt.destroy();                                  // remove the chart's nodes, f
 
 ```js
 container.addEventListener(GanttEvents.TASK_UPDATE_SUCCESS, (e) => {
-  const { taskId, updatedTask } = e.detail;
+  const { taskId, updatedTask, source } = e.detail;   // source: 3.20.0+
 });
 ```
 
 | Constant | Event name |
 |---|---|
-| `TASK_UPDATE` | `taskUpdate` |
-| `TASK_VALIDATION_ERROR` | `taskValidationError` |
-| `TASK_UPDATE_SUCCESS` | `taskUpdateSuccess` |
+| `TASK_UPDATE` | `taskUpdate` (through 3.19: dialog and inline edits only; 3.20.0+: every committed edit, with `source`) |
+| `TASK_VALIDATION_ERROR` | `taskValidationError` (edit dialog) |
+| `TASK_UPDATE_SUCCESS` | `taskUpdateSuccess` (same coverage as `taskUpdate`) |
 | `TASK_UPDATE_ERROR` | `taskUpdateError` |
 | `TASK_DRAGGED` | `taskDragged` |
 | `TASK_RESIZED` | `taskResized` |
+| `TASK_PROGRESS_CHANGED` | `taskProgressChanged` |
 | `SELECTION_CHANGE` | `selectionChange` |
 | `DEPENDENCY_ADDED` | `dependencyAdded` |
 | `DEPENDENCY_REMOVED` | `dependencyRemoved` |
 | `DEPENDENCY_ARROW_UPDATE` | `dependencyArrowUpdate` (internal redraw signal; never persist from it) |
+
+`source` (3.20.0+) is `'api' | 'dialog' | 'drag' | 'inline' | 'keyboard' | 'progress' | 'resize'`; neither event fires for undo/redo or `updateTask(..., { silent: true })`. On 3.20.0+ save from `taskUpdateSuccess` alone (saving on `taskDragged` too saves twice) and roll back with `updateTask(id, prev, { silent: true })`. Through 3.19 save drags/resizes from `taskDragged`/`taskResized` and dialog/inline edits from `taskUpdateSuccess`.
 
 ---
 
@@ -130,7 +144,7 @@ container.addEventListener(GanttEvents.TASK_UPDATE_SUCCESS, (e) => {
 
 ### 1. Date format mismatch
 ❌ ISO dates with default `inputDateFormat`:
-`{ startTime: '2026-06-01', endTime: '2026-06-15' }`: the bars draw, but the edit dialog shows empty dates and edits are written back as MM-DD-YYYY.
+`{ startTime: '2026-06-01', endTime: '2026-06-15' }`: the bars draw, but edits are written back as MM-DD-YYYY (and through 3.19 the edit dialog shows empty dates).
 ✅ Set the format:
 `{ inputDateFormat: 'YYYY-MM-DD', series: [...] }`
 
@@ -147,7 +161,7 @@ container.addEventListener(GanttEvents.TASK_UPDATE_SUCCESS, (e) => {
 ✅ `gantt.updateTask('t3', { progress: 75 })`.
 
 ### 5. Milestone with `endTime`
-❌ `{ type: 'Milestone', startTime: 'X' }`: capitalised type is an ordinary task, and without `endTime` it throws. An `endTime` on a real milestone only widens the timeline.
+❌ `{ type: 'Milestone', startTime: 'X' }`: capitalised type is an ordinary task, and without `endTime` it throws. `{ startTime: 'X' }` with no type throws through 3.19. An `endTime` on a real milestone only widens the timeline.
 ✅ `{ type: 'milestone', startTime: 'X' }`.
 
 ### 6. Listening on the gantt instance
@@ -159,24 +173,32 @@ container.addEventListener(GanttEvents.TASK_UPDATE_SUCCESS, (e) => {
 ✅ pass `enableSelection: true` in options.
 
 ### 8. `progress` as fraction
-❌ `progress: 0.75` → 1% bar.
+❌ `progress: 0.75` renders a 0.75% (nearly empty) bar.
 ✅ `progress: 75`.
 
 ### 9. Orphan `parentId`
-❌ `parentId` referencing a non-existent id: the row is not rendered.
+❌ `parentId` referencing a non-existent id: through 3.19 the row is not rendered; from 3.20.0 it lands at the root with a warning.
 ✅ Ensure every `parentId` matches an `id` in the same `series`.
 
 ### 10. License key skipped
-❌ The chart runs, but with a trial watermark. Production use needs a key.
-✅ `ApexGantt.setLicense('KEY')` once at app startup.
+❌ The chart runs, but with a trial watermark. ApexGantt is included in the Premium plan and above; there is no free tier.
+✅ `ApexGantt.setLicense('KEY')` once at application start.
 
 ### 11. Direct mutation of `series`
-❌ `options.series.push(newTask)` — chart doesn't refresh.
-✅ `gantt.update({ series: [...options.series, newTask] })`.
+❌ `options.series.push(newTask)`: the chart doesn't refresh.
+✅ `gantt.addTask(newTask)` for one task; `gantt.update({ series: freshTasks })` to replace the dataset (3.20.0+: clears undo history).
 
 ### 12. Manual data transforms
 ❌ `tasks.map(t => ({ id: t.task_id, name: t.title, ... }))` boilerplate.
 ✅ `parsing: { id: 'task_id', name: 'title', startTime: 'start_date', endTime: 'end_date' }`.
+
+### 13. Saving twice (3.20.0+)
+❌ Saving from both `taskDragged` and `taskUpdateSuccess`: every drag fires both.
+✅ Save from `taskUpdateSuccess` alone; roll back with `updateTask(id, prev, { silent: true })`.
+
+### 14. Saving tasks without links (3.20.0+)
+❌ `save(gantt.getTasks())`: links added with `addDependency()` or drawn by the user are lost.
+✅ `save({ tasks: gantt.getTasks(), links: gantt.getDependencies() })`; after loading, `addDependency` each link `canAddDependency` accepts, then `clearHistory()`.
 
 ---
 
@@ -184,7 +206,7 @@ container.addEventListener(GanttEvents.TASK_UPDATE_SUCCESS, (e) => {
 
 - **CRUD** (all undoable, fire events, pass optional `before*` veto hooks): `addTask(input, {parentId?})`, `deleteTask(id, {cascade?: 'forbid'|'children'|'orphan'})`, `moveTask(id, {newParentId?})`, `addDependency(from, to, {type?, lag?})`, `removeDependency(from, to)`, `canAddDependency(...)`.
 - **Undo/redo**: `history: { enabled, maxSize }` (on by default) + `undo()`/`redo()`/`canUndo()`/`canRedo()`/`clearHistory()`/`getHistorySize()` + `historyChange` event.
-- **Working calendar**: `calendar: { workingWeekdays, holidays, showNonWorkingStripes, dragSnapMode }`; `TaskDependency.lagUnit: 'working'|'calendar'`.
+- **Working calendar**: `calendar: { workingWeekdays, holidays, showNonWorkingStripes, dragSnapMode }`. (`TaskDependency.lagUnit` also shipped here but is read by nothing; deprecated in 3.20.0.)
 - **Sub-day scheduling**: `snapUnit: 'day'|'hour'|'minute'` + `snapValue` (needs time tokens in `inputDateFormat`).
 - **Interaction toggles**: `enableInlineEdit`, `enableProgressDrag` (→ `taskProgressChanged`), `enableTaskEditingShortcuts`, `enableTaskCRUDToolbar`, `enableContextMenu`, `enableAddTaskRow`.
 - **Visual**: `enableProjectBoundary`/`projectBoundaryColor`, `enableCrosshair`/`crosshairColor`, `enableRollups`, `barLabel`, `columnLines`.
@@ -211,6 +233,20 @@ container.addEventListener(GanttEvents.TASK_UPDATE_SUCCESS, (e) => {
 - **Shadow DOM (3.19.0)**: works inside a shadow root (pass an element inside it as the container); styles, dropdowns and keyboard focus stay inside it, and `--apx-*` tokens from the page still reach it.
 - **Container content is kept (3.19.0)**: `render()`, re-renders and `destroy()` no longer empty the container: children it held when the chart was constructed stay (anything appended later is treated as the chart's and removed). A new `ApexGantt` on a container that already holds a live chart destroys the old one first.
 
+## New in 3.20.0
+
+- **Methods**: `getTask(id)`, `getTasks()`, `getDependencies()`, `expandTask(id)`, `collapseTask(id)`, `scrollToTask(id, { expand })` (opens collapsed ancestors by default), `updateTask(id, patch, { silent })` (`patch: Partial<TaskInput>`).
+- **`update()` keeps task data** unless `series`/`parsing` is passed (passing `series` clears undo history); `calendar`/`inputDateFormat` rebuild the calendar; a theme switch resets only the theme's 18 colour options and keeps every other option. Edits to hidden rows (collapsed, filtered, virtualised) are stored; `updateTask(id, { collapsed })` re-renders; an edit keeps the task's tree level. A throwing `update({ series })`, `addTask` or `updateTask` leaves the previous data in place.
+- **Events**: `beforeTaskUpdate` runs on every edit path (drag, resize, progress, dialog, inline, keyboard, `updateTask`); `taskUpdate`/`taskUpdateSuccess` fire once per committed edit with `source`; `taskDragged`/`taskResized`/`taskProgressChanged` fire only after the commit is accepted. A parent drag or keyboard move is one batch and one undo step: all its `taskUpdate` events, then its `taskUpdateSuccess` events; vetoing one child keeps only that child. `beforeTaskAdd`/`taskAdded` report `input.parentId` too.
+- **Dependencies**: `addDependency()` throws on a self-link, a cycle and (unless `allowSummaryDescendantLinks`) a summary-descendant link.
+- **Data**: no `endTime` and no `type` means milestone (summary bar when it has children); a parent may give one date; parsing keeps an undated row only when it is the parent of a dated row (others are skipped with a warning); unknown or cyclic `parentId` goes to the root with a warning; ids match by value; one segment is stored as plain dates; `ParsingConfig` adds `showSummaryBar`, `baseline`, `segments`, `assignees`, `barTextColor`; `TaskInput.barTextColor`.
+- **Options**: any `calendar` object enables a Mon-Fri week; holiday strings read with `inputDateFormat`; `workingWeekdays` takes numeric strings and an empty list falls back to Mon-Fri; omitted `height` fills a container with its own height; `ToolbarSelect.value`; annotation `borderDashArray` / `label.orientation` honoured (a dashed line's gaps stay empty); `tooltipTemplate(task, fmt, context)` with `context.durationText`; built-in columns get their standard `title` when omitted.
+- **Display**: Duration in base units (`45 m`), used for Duration sort/filter/group too; groups ordered by value; empty values sort last; `BaselineVariance` in working days (`wd`) with a calendar; calendar stripes and holiday tooltips visible; bars/arrows follow `--apex-gantt-bar-fill` (falls back to `--apx-accent`) and `--apex-gantt-dependency-line`, resolved at render (call `update()`), never `--apx-series-N`; `--apex-gantt-font-family`/`--apex-gantt-font-size` reach tooltips and annotation labels.
+- **Editing**: edit dialog reads ISO and other formats; vetoed dialog save stays open; an unchanged dialog or inline editor commits nothing; day snapping steps calendar days across daylight-saving changes; `splitTask` `resumeAt` may be the segment's last day (day-only formats).
+- **Keyboard / RTL**: ArrowLeft/Right moves a focused bar one snap unit, Shift+Arrow resizes its end; Escape cancels drawing anywhere; RTL fixes (saved horizontal scroll now measured from the right edge).
+- **Types**: `startTime` optional, `type` accepts `'milestone'`; aria builder contexts need `task`; exports `TaskUpdateSource`, `GanttUpdateOptions`, `ScrollToTaskOptions`, `UpdateTaskOptions`, `DependencyLink`, `TooltipTemplate`, `TooltipTemplateContext`.
+- **License**: only a Premium (or higher) key removes the Gantt watermark (a lower valid key logs why); a later lower-plan key is ignored with a warning, so call `setLicense('')` first to downgrade.
+
 ---
 
 ## Framework Wrappers
@@ -221,4 +257,4 @@ npm install vue-apexgantt     # Vue 3
 npm install ngx-apexgantt     # Angular
 ```
 
-All wrappers call `destroy()` automatically on unmount and forward typed events from `GanttEventMap`.
+All wrappers call `destroy()` automatically on unmount. Pass the task array as `tasks` (not `series`) and other options in `options`; event handlers receive the event `detail`. Each exports `setApexGanttLicense(key)`. See `references/framework-wrappers.md`.

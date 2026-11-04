@@ -1,4 +1,4 @@
-# Interaction — UI State, Draw-to-Create, Scroll-to-Task, Export
+# Interaction: UI State, Draw-to-Create, Scroll-to-Task, Export
 
 Opt-in interaction features from the 3.13.0 wave (shipped under v3.14.0) and
 3.15.0. All are additive; existing charts are unaffected unless you enable them.
@@ -48,12 +48,25 @@ interface GanttUiState {
 Only serializable parts persist: a grouping's custom `accessor` / `label`
 functions are dropped (restore falls back to the column's accessor).
 
+`gantt.expandTask(id)` / `gantt.collapseTask(id)` (3.20.0+) change the same
+`collapsed` slice as `setState({ collapsed })`: view state only, never recorded
+in undo history, persisted with the view state, one render. From 3.20.0
+`setState({ selected })` warns once when `enableSelection` is off, and
+`setState({ scroll })` works in right-to-left charts. In RTL the saved
+horizontal scroll is measured from the right edge from 3.20.0, so state saved by
+older versions restores to a different position.
+
+A chart with no `height` whose container is sized by its content no longer
+resets the page scroll on a full re-render (collapse or expand, `collapseTask`,
+`expandTask`, `update()`, sort, filter, add, delete) from 3.20.0.
+
 ## Draw a task on the timeline (`enableDrawTask`)
 
 With `enableDrawTask: true`, drag across an **empty** stretch of the timeline to
 sweep out a date range; on release a task is created with the range snapped to
 `snapUnit` / `snapValue`. A preview bar follows the cursor, a plain click creates
-nothing, and Escape cancels mid-drag. Existing bars stay draggable/resizable,
+nothing, and Escape cancels mid-drag (from 3.20.0 wherever focus is; through 3.19
+only while focus is inside the chart). Existing bars stay draggable/resizable,
 since the draw gesture only starts on empty space.
 
 ```js
@@ -71,8 +84,19 @@ It works even when the target row is virtualized out of the DOM, and returns
 `false` when the task is unknown or already fully visible.
 
 ```js
-gantt.scrollToTask('task-42');       // → boolean
+gantt.scrollToTask('task-42');                     // boolean
+gantt.scrollToTask('task-42', { expand: false });  // 3.20.0+: do not open collapsed ancestors
 ```
+
+A task under a collapsed parent has no row to scroll to:
+
+- **From 3.20.0**, `expand` defaults to `true`: collapsed ancestors (and collapsed
+  groups) are opened first, then the row is scrolled into view. It returns
+  `false` for an unknown id, a filtered-out task, or `expand: false` with a
+  collapsed ancestor. It also works in right-to-left charts.
+- **Through 3.19** there is no options argument: it returns `false` for a hidden
+  child. Expand the ancestors yourself first: drop their ids from
+  `getState().collapsed` and pass the rest to `setState({ collapsed })`.
 
 Two options surface the same behavior in the UI:
 
@@ -103,13 +127,17 @@ await gantt.exportChart('png');                             // programmatic, any
 `exportChart(format?)` returns a `Promise` that resolves once the download has
 been triggered; `format` defaults to the configured `exportFormat` (`'svg'`).
 Under row virtualization the full dataset is expanded for the snapshot and
-restored afterward. Excel/XLSX data export remains a separate, future task.
+restored afterward. PNG and PDF are images of the chart, not data; there is no
+spreadsheet (XLSX) export. To export data, serialize `gantt.getTasks()` and
+`gantt.getDependencies()` (3.20.0+) yourself: the tasks carry only the links they
+were loaded with, so added and drawn links are only in `getDependencies()`.
 
 ## Common pitfalls
 
 | ❌ | ✅ |
 |---|---|
 | Expecting scroll chevrons by default | `enableScrollButtons` is `false` since 3.15.0; opt in |
+| `scrollToTask()` returning `false` for a collapsed child on 3.19 | Expand its ancestors first, or upgrade to 3.20.0 (expands by default) |
 | Passing a full state and losing other slices | `setState()` merges — omitted fields stay untouched |
 | Relying on a persisted group's `label` function | Only `field` + `direction` persist; reapply the function |
 | `exportChart('png')` without awaiting | It returns a `Promise`; `await` it if you need completion |
