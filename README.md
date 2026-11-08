@@ -24,7 +24,7 @@ AI models routinely get Gantt-chart code wrong: bad date formats, missing `rende
 - **Events** — full `GanttEventMap` with `CustomEvent.detail` shapes
 - **Selection, drag, resize, inline edit** with the right opt-in flags
 - **Custom toolbar items**, columns, parsing for non-standard data shapes
-- **Family theming**: the shared `--apx-*` CSS tokens the Gantt reads (`--apx-accent`, `--apx-fore`, `--apx-grid`, `--apx-surface`) and their precedence
+- **Family theming**: the shared `--apx-*` CSS tokens the Gantt reads (`--apx-accent`, `--apx-fore`, `--apx-grid`, `--apx-surface`) and their precedence, registered theme names and the free Ignite UI add-on (3.21.0)
 - **Framework wrappers**: `react-apexgantt`, `vue-apexgantt`, `ngx-apexgantt`
 
 ## Installation

@@ -200,6 +200,10 @@ container.addEventListener(GanttEvents.TASK_UPDATE_SUCCESS, (e) => {
 ❌ `save(gantt.getTasks())`: links added with `addDependency()` or drawn by the user are lost.
 ✅ `save({ tasks: gantt.getTasks(), links: gantt.getDependencies() })`; after loading, `addDependency` each link `canAddDependency` accepts, then `clearHistory()`.
 
+### 15. Ignite UI theme ignored or stuck light (3.21.0)
+❌ Ignite UI stylesheet but no `apexgantt/ignite-ui` import (`--ig-*` ignored silently); or `theme: 'light'` pinned (also by a wrapper prop default), which blocks the dark variant.
+✅ `import 'apexgantt/ignite-ui'` once before the first render, leave `theme` and `backgroundColor` unset, `gantt.render()` after swapping the sheet.
+
 ---
 
 ## New in 3.12.0
@@ -225,7 +229,7 @@ container.addEventListener(GanttEvents.TASK_UPDATE_SUCCESS, (e) => {
 
 ## New in 3.18.0
 
-- **Family theme tokens**: the Gantt reads the shared CSS tokens `--apx-accent`, `--apx-fore`, `--apx-grid`, `--apx-surface`, `--apx-series-1` … `--apx-series-N` directly from the cascade (declare them on `:root`, optionally under `prefers-color-scheme`). Precedence: product CSS variable > explicit option > `--apx-*` token > built-in default. Gantt has no theme-name option, so the `registerTheme` named-theme registry does not apply to it; theme it via the CSS tokens.
+- **Family theme tokens**: the Gantt reads the shared CSS tokens `--apx-accent`, `--apx-fore`, `--apx-grid`, `--apx-surface` and (3.21.0) `--apx-font-family` directly from the cascade; it does not read `--apx-series-N` (one bar fill, colour tasks with `barBackgroundColor`) (declare them on `:root`, optionally under `prefers-color-scheme`). Precedence from 3.21.0: option you passed > `--apex-gantt-*` variable > `--apx-*` token > registered theme > design system > theme default (through 3.20: product CSS variable > explicit option > `--apx-*` > default). From 3.21.0 `theme` also takes the name of a theme on the family registry (type `GanttThemeName`); through 3.20 it took only `'light' | 'dark'`.
 
 ## New in 3.18.3 and 3.19.0
 
@@ -246,6 +250,15 @@ container.addEventListener(GanttEvents.TASK_UPDATE_SUCCESS, (e) => {
 - **Keyboard / RTL**: ArrowLeft/Right moves a focused bar one snap unit, Shift+Arrow resizes its end; Escape cancels drawing anywhere; RTL fixes (saved horizontal scroll now measured from the right edge).
 - **Types**: `startTime` optional, `type` accepts `'milestone'`; aria builder contexts need `task`; exports `TaskUpdateSource`, `GanttUpdateOptions`, `ScrollToTaskOptions`, `UpdateTaskOptions`, `DependencyLink`, `TooltipTemplate`, `TooltipTemplateContext`.
 - **License**: only a Premium (or higher) key removes the Gantt watermark (a lower valid key logs why); a later lower-plan key is ignored with a warning, so call `setLicense('')` first to downgrade.
+
+---
+
+## New in 3.21.0
+
+- **Ignite UI theming, a free opt-in add-on**: `import 'apexgantt/ignite-ui'` (script tag `apexgantt.ignite-ui.min.js`, before or after `apexgantt.min.js`). Without it `--ig-*` is ignored silently. Maps `fontColor`, `cellBorderColor`, `arrowColor`, `barBackgroundColor`, `fontFamily`, and on Ignite UI 7.5+ `headerBackground` and `tooltipBGColor`. A dark variant darkens a chart with neither `theme` nor `backgroundColor` passed.
+- **Options**: top-level `designSystem` (`false` ignores Ignite UI) and `tokens` (`false` ignores `--apx-*` and Ignite UI), both default `true`. `theme` takes a registered theme's name.
+- **Tokens**: `--apx-font-family`, `--apx-radius-factor` (scales built-in radii; not `barBorderRadius`).
+- **No `refreshTokens()`**: re-read with `gantt.render()` (or `update({})`) after a stylesheet or token change.
 
 ---
 

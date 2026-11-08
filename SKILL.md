@@ -141,7 +141,9 @@ const gantt = new ApexGantt(el, {
 | Option | Type | Default | Notes |
 |---|---|---|---|
 | `series` | `TaskInput[]` | **required** | Task data. |
-| `theme` | `'light' \| 'dark'` | `'light'` | Built-in palette. See also the family `--apx-*` tokens below. An `update()` that switches the theme resets the theme's own colour options to the new theme's values (see §4); from 3.20.0 every other option carries over. |
+| `theme` | `'light' \| 'dark' \| string` | `'light'` | Built-in palette, or (3.21.0+) the name of a theme registered on the family registry (see Named themes below). See also the family `--apx-*` tokens below. An `update()` that switches the theme resets the theme's own colour options to the new theme's values (see §4); from 3.20.0 every other option carries over. From 3.21.0, left unset (with no `backgroundColor`), it follows a design system that declares a dark variant (Ignite UI, with its add-on). |
+| `tokens` | `boolean` | `true` | (3.21.0) `false` stops the chart reading the `--apx-*` family tokens and the page's design system (its variant included). |
+| `designSystem` | `boolean` | `true` | (3.21.0) `false` stops the chart reading the page's design system (Ignite UI's `--ig-*` tokens and variant); `--apx-*` still apply. Matters only while the `apexgantt/ignite-ui` add-on is loaded. |
 | `pixelsPerDay` | `number` | auto-fit | Initial zoom as pixels-per-day (continuous, clamped to about `0.25` to `7680`; header tiers are chosen automatically, there are no view modes). Reference values: Year ≈ `0.5`, Quarter ≈ `1.6`, Month ≈ `4.9`, Week ≈ `25.7`, Day = `80`. Omit to auto-fit the data range. |
 | `inputDateFormat` | `string` | `'MM-DD-YYYY'` | dayjs format for `startTime`/`endTime`. |
 | `snapUnit` | `'day' \| 'hour' \| 'minute'` | `'day'` | Granularity that drag / resize / inline edits snap to. `'hour'`/`'minute'` enable sub-day scheduling. From 3.20.0 `'day'` moves by calendar days, so a step across a daylight-saving change lands on the next date. See §9. |
@@ -225,15 +227,41 @@ ApexGantt does not read `--apx-series-N`. Bars and arrows follow `--apx-accent` 
 }
 ```
 
-Resolution order (highest wins):
+Resolution order (highest wins), from 3.21.0:
 
 ```
-product CSS variable  >  explicit option  >  --apx-* token  >  built-in default
+option you passed  >  --apex-gantt-* variable  >  --apx-* token  >  registered theme  >  design system  >  theme default
 ```
 
-Tokens resolve below anything you configured explicitly, so adopting them cannot change a chart that was already themed. One subtlety: an option set to a value equal to its built-in default is indistinguishable from one left alone, and the token wins there. Pin a product CSS variable if a value must hold regardless.
+An option counts as passed when it is in the options you gave the constructor or any `update()`, even at its default value; passing it as `undefined` in an `update()` takes it back, and so does an `update()` that switches `theme` for the colours the theme owns. Options you did not pass rank last, so a variable or a token themes them. "Design system" is Ignite UI, read only with its add-on (below). Values resolve when the chart renders, not live: after changing a variable or token, call `gantt.update({})` or `gantt.render()`.
 
-**ApexGantt has no theme-name option**, so the named-theme registry (`registerTheme` from `@apex/commons`) does not apply to it. Theme the Gantt via the CSS `--apx-*` tokens (optionally under a `prefers-color-scheme` block, as above) to keep it in sync with the rest of the family.
+Through 3.20 the order was `product CSS variable > explicit option > --apx-* token > built-in default`, and an option equal to its built-in default lost to the token.
+
+**More tokens (3.21.0).** `--apx-font-family` sets `fontFamily`. `--apx-radius-factor` multiplies Gantt's own built-in corner radii (menus, dialogs, the task form, tooltips, dropdowns, scrollbars, milestones, roll-ups); unset it is `1`. `barBorderRadius` is not scaled.
+
+**Named themes (3.21.0).** `theme` accepts the name of a theme on the registry the whole Apex family shares (for example one registered with `ApexCharts.registerTheme(name, { mode, tokens })` when ApexCharts is on the page). Its tokens fill the same slots as the `--apx-*` tokens, one rank below them. A theme registered with `mode: 'dark'` gives every other colour the dark theme's value; without one it is light. A name nothing is registered under renders as `'light'`; a theme registered under `'light'` or `'dark'` adds its tokens to that built-in theme. TypeScript: the option type is `GanttThemeName` (`ThemeMode | (string & {})`, exported from 3.21.0). Through 3.20 `theme` took only `'light' | 'dark'`.
+
+### Ignite UI theming (from apexgantt 3.21.0)
+
+An opt-in add-on, **free, no licence key**. Load it once and Gantt charts follow the Ignite UI theme on the page: bars, text, gridlines, the header, the tooltip, the font, light or dark.
+
+```js
+import 'apexgantt/ignite-ui';
+```
+
+```html
+<!-- without a bundler: before or after apexgantt.min.js -->
+<script src=".../apexgantt/apexgantt.min.js"></script>
+<script src=".../apexgantt/apexgantt.ignite-ui.min.js"></script>
+```
+
+- **Load order.** Before the first render; a chart rendered earlier picks it up on its next `render()` or `update()`. Without the add-on the `--ig-*` tokens are ignored, with no error; `--apx-*` work either way.
+- **What it maps.** `fontColor` `--ig-gray-800`, `cellBorderColor` and `arrowColor` `--ig-gray-300`, `barBackgroundColor` `--ig-primary-seed`, `fontFamily` `--ig-font-family`, and (Ignite UI 7.5.0+) `headerBackground` `--ig-surface-raised` and `tooltipBGColor` `--ig-surface-overlay`. `backgroundColor` and the row colours keep the theme's own.
+- **Ranking.** The lowest layer above the theme defaults: an option you passed, an `--apex-gantt-*` variable and an `--apx-*` token all win.
+- **Mode.** When the sheet declares a dark variant and you passed neither `theme` nor `backgroundColor`, the chart takes the dark theme's colours, and goes back to light when the variant changes. Passing `theme: 'light'` pins light and blocks the dark variant.
+- **Per chart.** `designSystem: false` turns it off; `tokens: false` turns off `--apx-*` and the design system together.
+- **Stylesheet swap.** ApexGantt has no `refreshTokens()`: call `gantt.render()` after switching the Ignite UI sheet.
+- **Other products.** The add-on also themes ApexTree and ApexSankey on the page (with several, load it from the newest package). ApexCharts charts take `apexcharts/features/ignite-ui`, which themes Gantt charts too, but on a script-tag page only once `apexcharts.js` has loaded, so load `apexgantt.ignite-ui.min.js` there for the Gantt charts.
 
 ---
 
@@ -573,6 +601,11 @@ Alternatively record links as they change from `dependencyAdded` / `dependencyRe
 
 ❌ From 3.20.0 `addDependency()` throws for a self-link, a link that would close a cycle, and (unless `dependencies.allowSummaryDescendantLinks: true`) a link between a task and its own ancestor or descendant. Code that relied on it accepting those now throws.
 ✅ `if (gantt.canAddDependency(a, b).ok) gantt.addDependency(a, b);` and read `reason` when it is not.
+
+### Pitfall 17: Ignite UI theme ignored, or stuck light (3.21.0)
+
+❌ An Ignite UI stylesheet on the page and no add-on: every `--ig-*` token is ignored silently. Or `theme: 'light'` passed (directly, or by a wrapper's `theme` prop default) on a page with a dark Ignite UI theme: the pinned theme blocks the dark variant.
+✅ `import 'apexgantt/ignite-ui'` once (free) before the first render, leave `theme` (and `backgroundColor`) unset, and call `gantt.render()` after swapping the Ignite UI stylesheet.
 
 ---
 
