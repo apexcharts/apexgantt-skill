@@ -8,14 +8,15 @@ description: >
   format, dependency types (`FS` / `SS` / `FF` / `SF`), date parsing,
   continuous zoom (`pixelsPerDay`), the `update()` / `updateTask()` lifecycle,
   events and veto hooks, custom toolbar items,
-  selection, theming via the family `--apx-*` CSS tokens, and framework
+  selection, theming via the family `--apx-*` CSS tokens and the free Ignite UI
+  add-on (`apexgantt/ignite-ui`), and framework
   integration (React / Vue / Angular). In React /
   Vue / Angular projects, prefer the framework wrapper packages
   (`react-apexgantt`, `vue-apexgantt`, `ngx-apexgantt`) over the core API.
 metadata:
   author: ApexCharts
-  version: "1.7.0"
-  library_version: "3.20.0"
+  version: "1.8.0"
+  library_version: "3.21.0"
   category: data-visualization
   tags: [gantt, timeline, project-management, scheduling, charts, svg, apexgantt]
   docs: https://apexcharts.com/docs/apexgantt/
@@ -251,8 +252,8 @@ import 'apexgantt/ignite-ui';
 
 ```html
 <!-- without a bundler: before or after apexgantt.min.js -->
-<script src=".../apexgantt/apexgantt.min.js"></script>
-<script src=".../apexgantt/apexgantt.ignite-ui.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/apexgantt@3.21.0/apexgantt.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/apexgantt@3.21.0/apexgantt.ignite-ui.min.js"></script>
 ```
 
 - **Load order.** Before the first render; a chart rendered earlier picks it up on its next `render()` or `update()`. Without the add-on the `--ig-*` tokens are ignored, with no error; `--apx-*` work either way.
@@ -604,7 +605,7 @@ Alternatively record links as they change from `dependencyAdded` / `dependencyRe
 
 ### Pitfall 17: Ignite UI theme ignored, or stuck light (3.21.0)
 
-❌ An Ignite UI stylesheet on the page and no add-on: every `--ig-*` token is ignored silently. Or `theme: 'light'` passed (directly, or by a wrapper's `theme` prop default) on a page with a dark Ignite UI theme: the pinned theme blocks the dark variant.
+❌ An Ignite UI stylesheet on the page and no add-on: every `--ig-*` token is ignored silently. Or `theme: 'light'` passed (directly, or by the `theme` prop default of vue-apexgantt 1.2.0 and earlier) on a page with a dark Ignite UI theme: the pinned theme blocks the dark variant.
 ✅ `import 'apexgantt/ignite-ui'` once (free) before the first render, leave `theme` (and `backgroundColor`) unset, and call `gantt.render()` after swapping the Ignite UI stylesheet.
 
 ---

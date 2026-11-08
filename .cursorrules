@@ -201,7 +201,7 @@ container.addEventListener(GanttEvents.TASK_UPDATE_SUCCESS, (e) => {
 ✅ `save({ tasks: gantt.getTasks(), links: gantt.getDependencies() })`; after loading, `addDependency` each link `canAddDependency` accepts, then `clearHistory()`.
 
 ### 15. Ignite UI theme ignored or stuck light (3.21.0)
-❌ Ignite UI stylesheet but no `apexgantt/ignite-ui` import (`--ig-*` ignored silently); or `theme: 'light'` pinned (also by a wrapper prop default), which blocks the dark variant.
+❌ Ignite UI stylesheet but no `apexgantt/ignite-ui` import (`--ig-*` ignored silently); or `theme: 'light'` pinned (also by the vue-apexgantt 1.2.0 and earlier prop default), which blocks the dark variant.
 ✅ `import 'apexgantt/ignite-ui'` once before the first render, leave `theme` and `backgroundColor` unset, `gantt.render()` after swapping the sheet.
 
 ---
