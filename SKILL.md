@@ -17,7 +17,7 @@ description: >
   (`react-apexgantt`, `vue-apexgantt`, `ngx-apexgantt`) over the core API.
 metadata:
   author: ApexCharts
-  version: "1.8.0"
+  version: "1.9.0"
   library_version: "3.22.0"
   category: data-visualization
   tags: [gantt, timeline, project-management, scheduling, charts, svg, apexgantt]
