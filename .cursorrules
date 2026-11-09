@@ -204,6 +204,14 @@ container.addEventListener(GanttEvents.TASK_UPDATE_SUCCESS, (e) => {
 ❌ Ignite UI stylesheet but no `apexgantt/ignite-ui` import (`--ig-*` ignored silently); or `theme: 'light'` pinned (also by the vue-apexgantt 1.2.0 and earlier prop default), which blocks the dark variant.
 ✅ `import 'apexgantt/ignite-ui'` once before the first render, leave `theme` and `backgroundColor` unset, `gantt.render()` after swapping the sheet.
 
+### 16. Unescaped task text in a custom `tooltipTemplate`
+❌ `` tooltipTemplate: (t) => `<b>${t.name}</b>` ``: the result is HTML, so a name like `<img src=x onerror=...>` runs script. The built-in tooltips escape from 3.22.0; a custom template never does.
+✅ `import { escapeHtml } from 'apexgantt'` and wrap all task data: `` `<b>${escapeHtml(t.name)}</b>` ``.
+
+### 17. Literal letters in `inputDateFormat` (3.22.0)
+❌ `inputDateFormat: 'YYYY-MM-DD Q1'`: from 3.22.0 `Q`, `Do`, `k`, `w`, `W`, `X`, `x`, `L`, `l`, `gggg`, `GGGG` are tokens and print values.
+✅ Bracket literals (`'YYYY-MM-DD [Q1]'`). To show dates differently from how they are stored, set `locale.displayDateFormat`, not `inputDateFormat`.
+
 ---
 
 ## New in 3.12.0
@@ -255,10 +263,23 @@ container.addEventListener(GanttEvents.TASK_UPDATE_SUCCESS, (e) => {
 
 ## New in 3.21.0
 
-- **Ignite UI theming, a free opt-in add-on**: `import 'apexgantt/ignite-ui'` (script tag `apexgantt.ignite-ui.min.js`, before or after `apexgantt.min.js`). Without it `--ig-*` is ignored silently. Maps `fontColor`, `cellBorderColor`, `arrowColor`, `barBackgroundColor`, `fontFamily`, and on Ignite UI 7.5+ `headerBackground` and `tooltipBGColor`. A dark variant darkens a chart with neither `theme` nor `backgroundColor` passed.
+- **Ignite UI theming, an opt-in add-on (no extra licence key)**: `import 'apexgantt/ignite-ui'` (script tag `apexgantt.ignite-ui.min.js`, before or after `apexgantt.min.js`). Without it `--ig-*` is ignored silently. Maps `fontColor`, `cellBorderColor`, `arrowColor`, `barBackgroundColor`, `fontFamily`, and on Ignite UI 7.5+ `headerBackground` and `tooltipBGColor`. A dark variant darkens a chart with neither `theme` nor `backgroundColor` passed.
 - **Options**: top-level `designSystem` (`false` ignores Ignite UI) and `tokens` (`false` ignores `--apx-*` and Ignite UI), both default `true`. `theme` takes a registered theme's name.
 - **Tokens**: `--apx-font-family`, `--apx-radius-factor` (scales built-in radii; not `barBorderRadius`).
 - **No `refreshTokens()`**: re-read with `gantt.render()` (or `update({})`) after a stylesheet or token change.
+
+---
+
+## New in 3.22.0
+
+- **Locale packs**: `locale: { pack }` with plain JSON-safe data; first-party Japanese `import { ja } from 'apexgantt/locales/ja'` (also `require('apexgantt/locales/ja').ja`, script `locales/ja.min.js` setting `ApexGanttLocales.ja`, and `apexgantt/locales/ja.json`). `status: 'draft'`: wording may change in a minor release. Explicit `locale.*` / `calendar.*` options win over the pack; a pack never turns working days on; a string `pack` is ignored with a warning.
+- **`locale` keys**: `tag` (BCP 47: root `lang`, plurals, number format, collation, full-width progress input; `'ja_JP'` is ignored), `displayDateFormat` (read-only dates in the task list and tooltips; editors keep `inputDateFormat`), `crosshairFormat` (`{ date, time }`; `crosshairLabelFormat` still wins), `timelineHeaderFormat` (per tier and `top`/`sub` row: pattern, `[{ minWidth, format }]` or function; `{end:PATTERN}`, `{fy}`, `{fq}`). `dateLocale` covers the header, bar aria-labels and crosshair only.
+- **Messages**: 72 new keys (tooltip labels `tooltip*Label`, `column*` titles, `duration*`, `progressValue`, `filterOperator*`, aria labels, `selectedCount`, `newTaskName`, `exportFileName`), English by default, exported as `DEFAULT_GANTT_MESSAGES`. Strings take `{param}`, `{n, number}`, `{n, plural, one {...} other {...}}`; the 7 function keys (`editTaskTitle`, `groupCountLabel`, `filterOperatorLabel`, `summaryAriaLabel`, `barAriaLabel`, `barAriaValueText`, `progressAriaLabel`) also take template strings. Input type is `GanttMessagesInput`. Messages are not escaped: keep them static.
+- **Calendar**: `weekStart` (0 to 6) and `fiscalYearStartMonth` (1 to 12) shape the header only; a `calendar` with just those keys leaves every day working. **Changed**: week cells follow the date locale's week start (Monday for `de`/`fr`, Saturday for `ar`); `weekStart: 0` keeps Sunday weeks.
+- **Date tokens** everywhere a date is formatted: `Q`, `Do`, `k`, `X`, `x`, `w`/`ww`/`wo`, `W`/`WW`, `gggg`/`GGGG`, `L`/`LL`/`LLL`/`LLLL`.
+- **IME / search**: quick filter waits for composition end (every chart); conversion Enter does not commit an inline edit, its Escape does not close the dialog; search compares NFKC-folded text.
+- **Security**: built-in bar/baseline tooltips and the edit dialog title show task names as text; custom `tooltipTemplate` must use `escapeHtml`. `TooltipTemplateContext` adds `messages`, `startText`, `endText`, `tag`.
+- Full detail: `references/localization.md`.
 
 ---
 

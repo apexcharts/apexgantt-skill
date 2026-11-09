@@ -32,7 +32,7 @@ new ApexGantt(el, {
 | Property | Type | Default | Description |
 |---|---|---|---|
 | `key` | `ColumnKey \| string` | none | Required. A built-in `ColumnKey`, or any other string for a custom column (needs `render`). |
-| `title` | `string` | see note | Header label. If omitted on a built-in `ColumnKey`, from 3.20.0 the column gets its standard title (Task Name, Start, End, Duration, Progress, Predecessors, Successors, Assignees, Baseline Start, Baseline End, Variance, WBS); through 3.19 only the four default keys fill it in, so pass it for any other built-in on older versions. A custom key always needs its own `title`. |
+| `title` | `string` | see note | Header label. If omitted on a built-in `ColumnKey`, from 3.20.0 the column gets its standard title (Task Name, Start, End, Duration, Progress, Predecessors, Successors, Assignees, Baseline Start, Baseline End, Variance, WBS); through 3.19 only the four default keys fill it in, so pass it for any other built-in on older versions. A custom key always needs its own `title`. From 3.22.0 the standard titles come from the `column*` messages (`columnName`, `columnStartTime`, ...), so `locale.messages` or a locale pack translates them; an explicit `title` still wins. |
 | `minWidth` | `string` | `'30px'` | Minimum CSS width (used in `minmax()`); also the preferred width floor when auto-sizing. |
 | `maxWidth` | `string` | `'320px'` | Upper bound for auto-sized width, so one long value can't dominate the panel. Ignored when `autoSizeColumns` is off. |
 | `flexGrow` | `number` | `1` | CSS Grid `fr` proportion (distributes any extra width). |
@@ -85,7 +85,7 @@ The four columns listed at the top of this file (`Name`, `StartTime`, `Duration`
 
 ### Custom columns & built-in renderers (3.12.0)
 
-A `ColumnListItem.key` can be a **custom string** (instead of a `ColumnKey`) paired with a `render(ctx) => string` returning an HTML string. Use the exported `escapeHtml` helper for any task data you interpolate:
+A `ColumnListItem.key` can be a **custom string** (instead of a `ColumnKey`) paired with a `render(ctx) => string` returning an HTML string. Use the exported `escapeHtml` helper for any task data you interpolate (the same applies to a custom `tooltipTemplate`, which the chart writes as HTML; see `references/localization.md`):
 
 ```js
 import { ApexGantt, ColumnKey, renderers, escapeHtml } from 'apexgantt';

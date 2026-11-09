@@ -61,6 +61,15 @@ new ApexGantt(el, {
 
 `QuickFilterOptions`: `{ placeholder?, fields? /* default ['name'] */, caseSensitive? /* default false */ }`.
 
+From 3.22.0, on every chart: the quick filter and the filter builder's text
+operators compare NFKC-folded text, so full-width and compatibility forms match
+their plain forms (`ＡＢＣ` finds `abc`, `ｶﾞ` finds `ガ`; what is shown is
+unchanged), and while an input method is composing the quick filter waits for
+the composition to end before filtering (some Android keyboards compose Latin
+words too, so there it filters per finished word). With `locale.tag` set, text
+sorting and grouping use that language's collation. Operator names in the
+builder come from the `filterOperator*` messages (`references/localization.md`).
+
 ### Advanced filter builder (popover)
 
 A "Filter" toolbar button (with an active-rule count badge) opens a popover for
@@ -129,7 +138,7 @@ Grouping composes with sort and filter and emits a `groupChange` event
 the underlying value (numbers numerically, dates chronologically) with "(None)"
 last; through 3.19 they are ordered by label text, so `10` sorts before `9`.
 Grouping by Duration with hour or minute snapping gives groups such as `4 h` /
-`8 h` from 3.20.0 (through 3.19 sub-day tasks all land in one `0 d` group). A criterion's `accessor` / `label`
+`8 h` from 3.20.0 (through 3.19 sub-day tasks all land in one `0 d` group). From 3.22.0 Duration groups are ordered by the count, not by reading the number back out of the label, so a localized label such as `期間 5日` still sorts 5, 12, 36. A criterion's `accessor` / `label`
 functions are **not** serialized by `persistState` / `getState()` (only `field`
 and `direction` are), so a restored grouping falls back to the column's own
 accessor.

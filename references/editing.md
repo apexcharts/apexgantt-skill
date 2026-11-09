@@ -223,7 +223,7 @@ The same operations, exposed through UI affordances. All default to the values b
 
 | Option | Default | What it enables |
 |---|---|---|
-| `enableInlineEdit` | `false` | Double-click a `name`/`startTime`/`endTime`/`duration`/`progress` list cell to edit inline. Auto-on when `enableTaskEdit: true` unless set `false`. Commit with Enter/blur, cancel with Escape. Summary rows are not editable, nor are a milestone's date, duration and progress cells. |
+| `enableInlineEdit` | `false` | Double-click a `name`/`startTime`/`endTime`/`duration`/`progress` list cell to edit inline. Auto-on when `enableTaskEdit: true` unless set `false`. Commit with Enter/blur, cancel with Escape. From 3.22.0 an Enter that confirms an IME conversion does not commit, and an Escape that cancels one does not close the task dialog; with `locale.tag` set the progress editors accept full-width digits. Summary rows are not editable, nor are a milestone's date, duration and progress cells. |
 | `enableProgressDrag` | `true` | Drag the handle at the bottom of a bar (visible on hover) to set progress; snaps to whole percent. Fires `taskProgressChanged`. |
 | `enableTaskEditingShortcuts` | `false` | `Delete`/`Backspace` deletes the focused row (cascade `'children'`); `Tab`/`Shift+Tab` indents/outdents. Requires task-list focus. |
 | `enableTaskCRUDToolbar` | `false` | `+ Add Task` and trash-`Delete` toolbar buttons. Delete acts on the current selection (needs `enableSelection: true`) with cascade `'children'`. |
@@ -256,7 +256,7 @@ only on weekend days) keeps its stored end. After every accepted edit the bar's
 ## Working calendar (`calendar`)
 
 ```js
-import { ApexGantt } from 'apexgantt';
+import { ApexGantt, escapeHtml } from 'apexgantt';
 
 new ApexGantt(el, {
   inputDateFormat: 'MM-DD-YYYY',
@@ -268,14 +268,16 @@ new ApexGantt(el, {
       { date: '01-01-2027', label: 'New Year\'s Day' } // labelled: shows in holidayTooltip
     ],
     showNonWorkingStripes: true,        // default true: tinted bands over weekends/holidays
-    holidayTooltip: ({ date, label }) => `<strong>${label ?? 'Holiday'}</strong>`,
+    holidayTooltip: ({ date, label }) => `<strong>${escapeHtml(label ?? 'Holiday')}</strong>`, // returns HTML: escape data
     dragSnapMode: 'next',               // 'next' (default) | 'previous' | 'allow'
+    weekStart: 1,                       // 3.22.0: header week cells start Monday (0-6)
+    fiscalYearStartMonth: 4,            // 3.22.0: quarter/year cells follow an April fiscal year (1-12)
   },
 });
 ```
 
 - An active calendar makes weekends + holidays drive duration math and summary aggregation.
-- **When it is active.** From 3.20.0 any `calendar` object you pass, even `{}`, turns it on with a Mon-Fri week. Through 3.19 it turns on only when `workingWeekdays` or `holidays` is set. No `calendar` option means every day is a working day.
+- **When it is active.** From 3.20.0 any `calendar` object you pass, even `{}`, turns it on with a Mon-Fri week, except (3.22.0+) one that holds only `weekStart` and/or `fiscalYearStartMonth`: those shape the timeline header only and leave every day a working day. Through 3.19 it turns on only when `workingWeekdays` or `holidays` is set. No `calendar` option means every day is a working day.
 - **Stripes and tooltip.** From 3.20.0 the stripes draw over the row backgrounds and under the bars, and `holidayTooltip` shows on hover. Through 3.19 the row backgrounds cover them and the tooltip does not show.
 - **`update()`.** From 3.20.0 passing `calendar` or `inputDateFormat` to `update()` rebuilds the working calendar, and a theme change keeps it. Through 3.19 `update()` never rebuilds the calendar.
 - **Holiday strings.** From 3.20.0 they are read with `inputDateFormat`, like task dates, falling back to ISO `YYYY-MM-DD`. In a `'DD-MM-YYYY'` chart `'03-04-2026'` is 3 April and `'25-12-2026'` is Christmas; through 3.19 strings go through the browser's lenient parser, so the first can read as 4 March and the second is dropped. Use `inputDateFormat` or ISO for holidays.
@@ -283,6 +285,7 @@ new ApexGantt(el, {
 - `dragSnapMode`: when a drag/resize commit lands on a non-working day, `'next'`/`'previous'` snap to the adjacent working day (drag preserves the source's working-day duration; resize snaps only the moving endpoint), `'allow'` permits ad-hoc non-working start/end.
 - Dependency `lag` counts **working days** while a calendar is active and calendar days otherwise. It feeds the critical path and the arrow tooltip only; links never move tasks. `TaskDependency.lagUnit` is read by nothing, has no effect, and is deprecated in 3.20.0.
 - From 3.20.0 the `BaselineVariance` column counts working days (suffix `wd`) while a calendar is active.
+- **`weekStart` / `fiscalYearStartMonth` (3.22.0+).** `weekStart` (0 to 6) sets where header week cells start and what week numbers read; unset, the `locale.dateLocale`'s own week start applies, else Sunday. Changed in 3.22.0: under a `dateLocale` with a non-Sunday week start (`de`, `fr`, `ar`, ...) week cells now start on that day; set `weekStart: 0` to keep Sunday weeks. `fiscalYearStartMonth` (1 to 12) makes quarter and year cells start on fiscal boundaries. Neither affects working days or duration math. See `references/localization.md`.
 
 ## Sub-day scheduling (`snapUnit` / `snapValue`)
 

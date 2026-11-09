@@ -38,6 +38,8 @@ Date strings are parsed with [dayjs](https://day.js.org/docs/en/parse/string-for
 
 Each string is first parsed strictly against `inputDateFormat`. When that fails, ApexGantt falls back to dayjs's lenient parser, so ISO strings such as `'2026-01-15'` still draw under the default format. That fallback is not a format detector: a string it cannot read either (such as `'15/01/2026'` under the default) gives an invalid date and a misplaced or missing bar, and how lenient parsing treats non-ISO strings varies by browser. A mismatched format also goes wrong even when the bars draw: dragged and edited dates are written back in `inputDateFormat`, mixing formats in your data. Through 3.19 the edit dialog shows empty date fields too; from 3.20.0 it reads ISO and other formats, shows an empty field only for a date it cannot read (never "Invalid Date"), and an untouched dialog or inline editor no longer rewrites the stored date. Always set `inputDateFormat` to match your data.
 
+**Changed in 3.22.0: more format tokens.** `inputDateFormat` now reads `Q`, `Do`, `k`, `X`, `x`, `w`/`ww`/`wo`, `W`/`WW`, `gggg`/`GGGG` and `L`/`LL`/`LLL`/`LLLL` (and lowercase forms). A format that held one of `Q`, `Do`, `k`, `w`, `W`, `X`, `x`, `L`, `l`, `gggg` or `GGGG` as literal text now prints a value there: wrap literal text in square brackets (`'YYYY-MM-DD [Q1]'`). The chart logs one warning when it finds such a letter outside brackets. The default `'MM-DD-YYYY'` and the formats in the table above are unaffected. To show dates differently from how they are stored, set `locale.displayDateFormat` (3.22.0) instead of changing `inputDateFormat`; see `references/localization.md`.
+
 ## Hierarchy via `parentId`
 
 ```js

@@ -8,15 +8,17 @@ description: >
   format, dependency types (`FS` / `SS` / `FF` / `SF`), date parsing,
   continuous zoom (`pixelsPerDay`), the `update()` / `updateTask()` lifecycle,
   events and veto hooks, custom toolbar items,
-  selection, theming via the family `--apx-*` CSS tokens and the free Ignite UI
-  add-on (`apexgantt/ignite-ui`), and framework
+  selection, theming via the family `--apx-*` CSS tokens and the Ignite UI
+  add-on (`apexgantt/ignite-ui`), localization (locale packs such as
+  `apexgantt/locales/ja`, messages, display date formats, week start and fiscal
+  year), and framework
   integration (React / Vue / Angular). In React /
   Vue / Angular projects, prefer the framework wrapper packages
   (`react-apexgantt`, `vue-apexgantt`, `ngx-apexgantt`) over the core API.
 metadata:
   author: ApexCharts
   version: "1.8.0"
-  library_version: "3.21.0"
+  library_version: "3.22.0"
   category: data-visualization
   tags: [gantt, timeline, project-management, scheduling, charts, svg, apexgantt]
   docs: https://apexcharts.com/docs/apexgantt/
@@ -146,10 +148,10 @@ const gantt = new ApexGantt(el, {
 | `tokens` | `boolean` | `true` | (3.21.0) `false` stops the chart reading the `--apx-*` family tokens and the page's design system (its variant included). |
 | `designSystem` | `boolean` | `true` | (3.21.0) `false` stops the chart reading the page's design system (Ignite UI's `--ig-*` tokens and variant); `--apx-*` still apply. Matters only while the `apexgantt/ignite-ui` add-on is loaded. |
 | `pixelsPerDay` | `number` | auto-fit | Initial zoom as pixels-per-day (continuous, clamped to about `0.25` to `7680`; header tiers are chosen automatically, there are no view modes). Reference values: Year ≈ `0.5`, Quarter ≈ `1.6`, Month ≈ `4.9`, Week ≈ `25.7`, Day = `80`. Omit to auto-fit the data range. |
-| `inputDateFormat` | `string` | `'MM-DD-YYYY'` | dayjs format for `startTime`/`endTime`. |
+| `inputDateFormat` | `string` | `'MM-DD-YYYY'` | dayjs format for `startTime`/`endTime`. Changed in 3.22.0: it reads more tokens (`Q`, `Do`, `k`, `w`, `W`, `X`, `x`, `L`, `l`, `gggg`, `GGGG`), so a format holding one of those letters as literal text must bracket it (`'[Q]'`); the chart warns once. The default is unaffected. See `references/localization.md`. |
 | `snapUnit` | `'day' \| 'hour' \| 'minute'` | `'day'` | Granularity that drag / resize / inline edits snap to. `'hour'`/`'minute'` enable sub-day scheduling. From 3.20.0 `'day'` moves by calendar days, so a step across a daylight-saving change lands on the next date. See §9. |
 | `snapValue` | `number` | `1` | Multiplier on `snapUnit` (e.g. `'minute'` + `15` gives 15-min steps). |
-| `calendar` | `CalendarOptions` | none | Working-calendar (weekends, holidays, non-working stripes, drag snap). From 3.20.0 holiday strings are read with `inputDateFormat` (ISO always works) and `workingWeekdays` accepts numeric strings. See §9. |
+| `calendar` | `CalendarOptions` | none | Working-calendar (weekends, holidays, non-working stripes, drag snap). From 3.20.0 holiday strings are read with `inputDateFormat` (ISO always works) and `workingWeekdays` accepts numeric strings. From 3.22.0 also `weekStart` (0 to 6) and `fiscalYearStartMonth` (1 to 12), which only shape the timeline header; a `calendar` holding only those two does not turn working days on. See §9. |
 | `history` | `{ enabled, maxSize }` | `{ enabled: true, maxSize: 100 }` | Undo/redo stack config. See §10. |
 | `width` / `height` | `number \| string` | `'100%'` / `'500px'` | Pixel number or CSS string. From 3.20.0, when `height` is omitted and the container already has a height of its own, the chart fills the container and follows its size, and with more than 50 rows (virtualised) the rows reach the bottom of the container on first paint. Without a container height, a full re-render (collapse, sort, filter, `update()`, add, delete) no longer resets the page scroll from 3.20.0. |
 | `rowHeight` | `number` | `40` | px |
@@ -187,13 +189,14 @@ const gantt = new ApexGantt(el, {
 | `projectBoundaryColor` | `string` | `'#7C3AED'` | Stroke for the boundary lines. Falls back to `annotationBorderColor`. |
 | `enableCrosshair` | `boolean` | `false` | Vertical cursor-following line + date/time label. |
 | `crosshairColor` | `string` | theme accent | Crosshair line and label-background color. |
-| `crosshairLabelFormat` | `(date, tier) => string` | auto | Custom crosshair label formatter; `tier` is the active header tier. |
+| `crosshairLabelFormat` | `(date, tier) => string` | auto | Custom crosshair label formatter; `tier` is the active header tier. Wins over `locale.crosshairFormat` (3.22.0, patterns as strings). |
 | `barLabel` | `BarLabelOptions` | `{ position: 'right' }` | Per-task bar label: `position` `'right'\|'inside'\|'left'\|'auto'`, `field`, `render`, `className`, `leadingPadding`. |
 | `columnLines` | `boolean` | `true` | Draw vertical lines between timeline columns. `false` keeps only row dividers. |
 | `baseline` | `{ enabled, color }` | disabled | See §2. |
 | `parsing` | `ParsingConfig` | none | Field-mapping to avoid manual transforms. See §8. |
 | `toolbarItems` | `ToolbarItem[]` | `[]` | Custom toolbar buttons / selects / separators. A select's optional `value` (3.20.0+) sets its initial value, and from 3.20.0 a select keeps its chosen value across re-renders. |
-| `tooltipTemplate` | `(task, fmt, context) => string` | built-in | HTML string returned per task. From 3.20.0 a third argument `context` (`TooltipTemplateContext`) carries `durationText`, the task's duration exactly as the Duration column shows it (`'45 m'`, `'5 wd'`); two-argument templates still work, and the default tooltip's Duration line matches the column. |
+| `tooltipTemplate` | `(task, fmt, context) => string` | built-in | HTML string returned per task. From 3.20.0 a third argument `context` (`TooltipTemplateContext`) carries `durationText`, the task's duration exactly as the Duration column shows it (`'45 m'`, `'5 wd'`); two-argument templates still work, and the default tooltip's Duration line matches the column. From 3.22.0 `context` also carries `messages`, `startText`, `endText` and `tag`. The result is written as HTML: pass task data through the exported `escapeHtml` (the built-in tooltip escapes the task name from 3.22.0; through 3.21 it did not). |
+| `locale` | `LocaleOptions` | English, `'ltr'` | `direction`, `dateLocale` and `messages`; from 3.22.0 also `pack` (e.g. `apexgantt/locales/ja`), `tag`, `displayDateFormat`, `crosshairFormat`, `timelineHeaderFormat`, and template strings in `messages`. See `references/localization.md`. |
 | `annotations` | `Annotation[]` | `[]` | Line (`x1` only) or range (`x1` to `x2`) markers that run down the task rows; `label.orientation` turns only the label. Per-annotation `borderDashArray` (`number \| number[]`) and `label.orientation`, falling back to the global `annotationBorderDashArray` / `annotationOrientation`, are honoured from 3.20.0. From 3.20.0 a dashed line leaves its gaps empty so the timeline shows through (range annotations keep their fill). |
 
 ### Family theme tokens (`--apx-*`) (3.18.0+)
@@ -244,7 +247,7 @@ Through 3.20 the order was `product CSS variable > explicit option > --apx-* tok
 
 ### Ignite UI theming (from apexgantt 3.21.0)
 
-An opt-in add-on, **free, no licence key**. Load it once and Gantt charts follow the Ignite UI theme on the page: bars, text, gridlines, the header, the tooltip, the font, light or dark.
+An opt-in add-on that needs **no extra licence key**. Load it once and Gantt charts follow the Ignite UI theme on the page: bars, text, gridlines, the header, the tooltip, the font, light or dark.
 
 ```js
 import 'apexgantt/ignite-ui';
@@ -252,8 +255,8 @@ import 'apexgantt/ignite-ui';
 
 ```html
 <!-- without a bundler: before or after apexgantt.min.js -->
-<script src="https://cdn.jsdelivr.net/npm/apexgantt@3.21.0/apexgantt.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/apexgantt@3.21.0/apexgantt.ignite-ui.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/apexgantt@3.22.0/apexgantt.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/apexgantt@3.22.0/apexgantt.ignite-ui.min.js"></script>
 ```
 
 - **Load order.** Before the first render; a chart rendered earlier picks it up on its next `render()` or `update()`. Without the add-on the `--ig-*` tokens are ignored, with no error; `--apx-*` work either way.
@@ -606,7 +609,17 @@ Alternatively record links as they change from `dependencyAdded` / `dependencyRe
 ### Pitfall 17: Ignite UI theme ignored, or stuck light (3.21.0)
 
 ❌ An Ignite UI stylesheet on the page and no add-on: every `--ig-*` token is ignored silently. Or `theme: 'light'` passed (directly, or by the `theme` prop default of vue-apexgantt 1.2.0 and earlier) on a page with a dark Ignite UI theme: the pinned theme blocks the dark variant.
-✅ `import 'apexgantt/ignite-ui'` once (free) before the first render, leave `theme` (and `backgroundColor`) unset, and call `gantt.render()` after swapping the Ignite UI stylesheet.
+✅ `import 'apexgantt/ignite-ui'` once (no extra licence key) before the first render, leave `theme` (and `backgroundColor`) unset, and call `gantt.render()` after swapping the Ignite UI stylesheet.
+
+### Pitfall 18: Unescaped task text in a custom `tooltipTemplate`
+
+❌ `` tooltipTemplate: (task) => `<b>${task.name}</b>` ``: the result is HTML, so a task name such as `<img src=x onerror=...>` runs script. From 3.22.0 the built-in bar and baseline tooltips and the edit dialog title escape the name (through 3.21 they did not); a custom template is still on its own.
+✅ `import { escapeHtml } from 'apexgantt'` and wrap every piece of task data: `` `<b>${escapeHtml(task.name)}</b>` ``. Reuse `context.messages` / `context.startText` (3.22.0) for translated labels and display dates.
+
+### Pitfall 19: Literal letters in `inputDateFormat`, and dates that `dateLocale` does not touch (3.22.0)
+
+❌ `inputDateFormat: 'YYYY-MM-DD Q1'`: from 3.22.0 `Q`, `Do`, `k`, `w`, `W`, `X`, `x`, `L`, `l`, `gggg` and `GGGG` are tokens, so the literal prints a value. Or expecting `locale.dateLocale` to translate the task-list and tooltip dates: it covers the header, bar aria-labels and the crosshair only.
+✅ Bracket literal text (`'YYYY-MM-DD [Q1]'`), and set `locale.displayDateFormat` (or a pack) for read-only dates; editors keep `inputDateFormat`.
 
 ---
 
@@ -644,19 +657,25 @@ Supported parse keys: `id`, `name`, `startTime`, `endTime`, `progress`, `type`, 
 When active, weekends + holidays drive duration math, summary aggregation, and timeline stripes. No `calendar` option means every day is a working day.
 
 ```js
+import { ApexGantt, escapeHtml } from 'apexgantt';
+
 new ApexGantt(el, {
   series: tasks,
   calendar: {
     workingWeekdays: [1, 2, 3, 4, 5],          // 0=Sun ... 6=Sat; default Mon-Fri
     holidays: ['12-25-2026', { date: '01-01-2027', label: 'New Year' }],
     showNonWorkingStripes: true,               // tinted bands over non-working columns; default true
-    holidayTooltip: ({ date, label }) => `<b>${label ?? 'Holiday'}</b>`,
+    holidayTooltip: ({ date, label }) => `<b>${escapeHtml(label ?? 'Holiday')}</b>`, // returns HTML: escape data
     dragSnapMode: 'next',                       // 'next' (default) | 'previous' | 'allow'
+    weekStart: 1,                               // 3.22.0: header week cells start Monday (0-6)
+    fiscalYearStartMonth: 4,                    // 3.22.0: quarter/year cells follow an April fiscal year (1-12)
   },
 });
 ```
 
-**When the calendar turns on.** From 3.20.0 any `calendar` object you pass, even `{}`, turns on the working calendar with a Mon-Fri week. Through 3.19 it turns on only when `workingWeekdays` or `holidays` is set, so `calendar: { showNonWorkingStripes: true }` alone does nothing.
+**When the calendar turns on.** From 3.20.0 any `calendar` object you pass, even `{}`, turns on the working calendar with a Mon-Fri week. The exception (3.22.0+): a `calendar` that holds only `weekStart` and/or `fiscalYearStartMonth` shapes the timeline header and leaves every day a working day. Through 3.19 it turns on only when `workingWeekdays` or `holidays` is set, so `calendar: { showNonWorkingStripes: true }` alone does nothing.
+
+**Week start and fiscal year (3.22.0+).** `weekStart` moves where week cells start and what week numbers read; unset, the `locale.dateLocale`'s own week start applies, else Sunday. Changed in 3.22.0: with a `dateLocale` whose week starts on Monday (`de`, `fr`, `en-gb`, ...) or Saturday (`ar`), week cells now start on that day (through 3.21 they always ran Sunday to Saturday); set `weekStart: 0` to keep Sunday weeks. `fiscalYearStartMonth` makes quarter and year cells start on fiscal boundaries (built-in labels `FY2026`, `#1 Apr-Jun`). See `references/localization.md`.
 
 **Stripes and holiday tooltips.** From 3.20.0 the stripes draw over the row backgrounds and under the bars, and `holidayTooltip` shows on hover. Through 3.19 the opaque row backgrounds cover the stripes and the tooltip does not show.
 
@@ -756,7 +775,22 @@ Everything below is also marked "3.20.0+" where it appears above.
 
 ---
 
-## 12. Reference Routing Table
+## 12. What changed in 3.22.0
+
+Localization, plus one security fix. Details and examples: `references/localization.md`.
+
+- **Locale packs**: `locale.pack` takes a plain-data pack; first-party Japanese at `apexgantt/locales/ja` (also `require(...).ja`, `locales/ja.min.js` setting `ApexGanttLocales.ja`, and `apexgantt/locales/ja.json`), `status: 'draft'` so its wording may change in a minor release. Explicit `locale.*` and `calendar.*` options always win, and a pack never turns working days on.
+- **New `locale` keys**: `tag` (root `lang`, plural and number rules, collation, full-width progress input), `displayDateFormat` (read-only dates in the task list and tooltips), `crosshairFormat`, `timelineHeaderFormat` (per tier and row; patterns, width-gated candidates or functions; `{end:...}`, `{fy}`, `{fq}`).
+- **Messages**: 72 new `GanttMessages` keys (tooltip labels, column titles, durations, filter operators, aria labels, `selectedCount`, `newTaskName`, `exportFileName`), all defaulting to the old English; every string takes `{param}`, `{n, number}` and `{n, plural, ...}`; the seven function keys also take template strings. `locale.messages` is typed `GanttMessagesInput`, and a hand-written complete `GanttMessages` literal must spread `DEFAULT_GANTT_MESSAGES`.
+- **Calendar**: `weekStart` and `fiscalYearStartMonth` (header only). Week cells now follow the date locale's week start.
+- **Date tokens**: `Q`, `Do`, `k`, `X`, `x`, `w`/`ww`/`wo`, `W`/`WW`, `gggg`/`GGGG`, `L`/`LL`/`LLL`/`LLLL` everywhere a date is formatted, `inputDateFormat` included (bracket literal letters).
+- **IME and search**: the quick filter waits for a composition to end (every chart); a conversion's Enter does not commit an inline edit and its Escape does not close the task dialog; text search compares NFKC-folded text.
+- **Security**: the built-in bar and baseline tooltips and the edit dialog title show task names as text. Custom `tooltipTemplate` functions must still use `escapeHtml`; `TooltipTemplateContext` gains `messages`, `startText`, `endText`, `tag`.
+- **Display**: grouping by Duration orders by the count; top header cells get an inline `max-width` (a wide label is cut instead of shifting the row); the edit dialog's accessible name works again; dependency arrows and the crosshair follow the header geometry under any week start or fiscal year.
+
+---
+
+## 13. Reference Routing Table
 
 For deeper detail and full working examples, refer to:
 
@@ -770,3 +804,4 @@ For deeper detail and full working examples, refer to:
 | Events (incl. `source`), selection, edit dialog, drag/resize, progress drag, saving and rolling back edits | `references/events.md` |
 | CRUD API, `getTask`/`getTasks`/`getDependencies`, saving and reloading links, `expandTask`/`collapseTask`, veto hooks, undo/redo, calendar, sub-day scheduling, interaction toggles | `references/editing.md` |
 | React, Vue 3, Angular wrappers, web components (shadow DOM) | `references/framework-wrappers.md` |
+| Localization: `locale` (packs, `apexgantt/locales/ja`, `tag`, messages and templates, `displayDateFormat`, `crosshairFormat`, `timelineHeaderFormat`), week start, fiscal year, date tokens, IME, tooltip escaping | `references/localization.md` |

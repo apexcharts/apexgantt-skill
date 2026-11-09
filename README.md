@@ -24,7 +24,8 @@ AI models routinely get Gantt-chart code wrong: bad date formats, missing `rende
 - **Events** — full `GanttEventMap` with `CustomEvent.detail` shapes
 - **Selection, drag, resize, inline edit** with the right opt-in flags
 - **Custom toolbar items**, columns, parsing for non-standard data shapes
-- **Family theming**: the shared `--apx-*` CSS tokens the Gantt reads (`--apx-accent`, `--apx-fore`, `--apx-grid`, `--apx-surface`) and their precedence, registered theme names and the free Ignite UI add-on (3.21.0)
+- **Family theming**: the shared `--apx-*` CSS tokens the Gantt reads (`--apx-accent`, `--apx-fore`, `--apx-grid`, `--apx-surface`) and their precedence, registered theme names and the Ignite UI add-on (3.21.0)
+- **Localization** (3.22.0): `locale.pack` and the Japanese pack `apexgantt/locales/ja`, `locale.tag`, messages with template strings, `displayDateFormat` / `crosshairFormat` / `timelineHeaderFormat`, `calendar.weekStart` and `calendar.fiscalYearStartMonth`, date tokens, IME behaviour and tooltip escaping
 - **Framework wrappers**: `react-apexgantt`, `vue-apexgantt`, `ngx-apexgantt`
 
 ## Installation
@@ -80,7 +81,8 @@ const deps = await readFile(referencePath('dependencies.md'), 'utf8');
 │   ├── interaction.md             # UI state, draw-to-create, scroll-to-task, export
 │   ├── editing.md                 # CRUD, undo/redo, calendar, sub-day scheduling
 │   ├── events.md                  # GanttEventMap, selection, drag, resize
-│   └── framework-wrappers.md      # React, Vue, Angular, shadow DOM
+│   ├── framework-wrappers.md      # React, Vue, Angular, shadow DOM
+│   └── localization.md            # locale packs, messages, date formats, week start, fiscal year
 └── install/
     ├── claude-code.md
     ├── cursor.md

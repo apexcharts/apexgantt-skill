@@ -25,6 +25,7 @@ export const referenceFiles = [
   'framework-wrappers.md',
   'grid.md',
   'interaction.md',
+  'localization.md',
 ];
 
 /** Resolve a reference file by its filename. Throws if not in the known list. */
